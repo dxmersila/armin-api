@@ -17,7 +17,7 @@ class FileFactory extends Factory
      */
     public function definition(): array
     {
-        $extension = fake()->randomElement(['jpg', 'png', 'webp', 'pdf']);
+        $extension = fake()->randomElement(['jpg', 'png', 'webp']);
 
         return [
             'name' => fake()->word() . '.' . $extension,
@@ -26,7 +26,6 @@ class FileFactory extends Factory
                 'jpg' => 'image/jpeg',
                 'png' => 'image/png',
                 'webp' => 'image/webp',
-                'pdf' => 'application/pdf',
             },
             'size' => fake()->numberBetween(10_000, 5_000_000),
         ];
