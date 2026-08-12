@@ -36,6 +36,13 @@ class ItemController extends Controller
             });
         }
 
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                    ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
+        }
+
         $items = $query->paginate(15);
 
         return ItemResource::collection($items);
