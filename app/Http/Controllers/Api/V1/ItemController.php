@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ItemResource;
 use App\Models\Item;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -14,6 +15,10 @@ class ItemController extends Controller
     {
         $request->validate([
             'page' => ['nullable', 'integer', 'min:1'],
+            'sort' => ['nullable', Rule::in(['latest', 'oldest', 'title'])],
+            'search' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'string'],
+            'tag' => ['nullable', 'string'],
         ]);
 
         $query = Item::query()
