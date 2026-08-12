@@ -43,6 +43,15 @@ class ItemController extends Controller
             });
         }
 
+        if ($request->filled('sort')) {
+            match ($request->sort) {
+                'latest' => $query->latest(),
+                'oldest' => $query->oldest(),
+                'title' => $query->orderBy('title'),
+                default => null,
+            };
+        }
+
         $items = $query->paginate(15);
 
         return ItemResource::collection($items);
