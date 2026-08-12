@@ -12,6 +12,10 @@ class ItemController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
+        $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
         $query = Item::query()
             ->where('is_visible', true)
             ->with([
