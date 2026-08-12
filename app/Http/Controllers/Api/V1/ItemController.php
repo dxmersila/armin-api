@@ -21,4 +21,15 @@ class ItemController extends Controller
 
         return ItemResource::collection($items);
     }
+
+    public function show(Item $item): ItemResource
+    {
+        $item->load([
+            'categories',
+            'tags',
+            'media.file',
+        ]);
+
+        return new ItemResource($item);
+    }
 }
