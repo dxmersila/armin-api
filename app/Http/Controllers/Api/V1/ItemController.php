@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ItemResource;
 use App\Models\Item;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ItemController extends Controller
@@ -13,6 +13,7 @@ class ItemController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Item::query()
+            ->where('is_visible', true)
             ->with([
                 'categories',
                 'tags',
@@ -38,6 +39,8 @@ class ItemController extends Controller
 
     public function show(Item $item): ItemResource
     {
+        abort_unless($item->is_visible, 404);
+
         $item->load([
             'categories',
             'tags',
