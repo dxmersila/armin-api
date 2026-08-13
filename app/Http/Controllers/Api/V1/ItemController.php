@@ -49,7 +49,7 @@ class ItemController extends Controller
             };
         }
 
-        $items = $query->paginate(15);
+        $items = $query->paginate(12);
 
         return ItemResource::collection($items);
     }
