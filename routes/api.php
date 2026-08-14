@@ -25,4 +25,12 @@ Route::prefix('v1')->group(function () {
             Route::get('/me', [AuthController::class, 'me']);
         });
     });
+
+    Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+        Route::get('/test', function () {
+            return response()->json([
+                'message' => 'admin access granted'
+            ]);
+        });
+    });
 });
