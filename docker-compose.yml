@@ -6,6 +6,8 @@ services:
         container_name: laravel-app
         user: "${UID}:${GID}"
         working_dir: /var/www/html
+        environment:
+            HOME: /tmp
         volumes:
             - .:/var/www/html
         networks:
