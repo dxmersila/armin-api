@@ -12,7 +12,7 @@ class AdminAuthorizationTest extends TestCase
 
     public function test_guest_cannot_access_admin_route(): void
     {
-        $response = $this->getJson('/api/v1/admin/test');
+        $response = $this->getJson('/api/v1/admin/dashboard');
 
         $response->assertStatus(401);
     }
@@ -25,7 +25,7 @@ class AdminAuthorizationTest extends TestCase
 
         $response = $this
             ->actingAs($user, 'sanctum')
-            ->getJson('/api/v1/admin/test');
+            ->getJson('/api/v1/admin/dashboard');
 
         $response->assertStatus(403);
     }
@@ -38,12 +38,14 @@ class AdminAuthorizationTest extends TestCase
 
         $response = $this
             ->actingAs($admin, 'sanctum')
-            ->getJson('/api/v1/admin/test');
+            ->getJson('/api/v1/admin/dashboard');
 
         $response
             ->assertStatus(200)
             ->assertJson([
-                'message' => 'admin access granted',
+                'users_count' => 1,
+                'items_count' => 0,
+                'categories_count' => 0,
             ]);
     }
 }
