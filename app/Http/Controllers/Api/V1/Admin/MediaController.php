@@ -9,6 +9,7 @@ use App\Models\File;
 use App\Models\Item;
 use App\Models\Media;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MediaController extends Controller
@@ -44,5 +45,22 @@ class MediaController extends Controller
         return (new MediaResource($media))
             ->response()
             ->setStatusCode(201);
+    }
+
+    public function destroy(Item $item, Media $media): JsonResponse
+    {
+        abort_unless($media->item_id === $item->id, 404);
+
+        $file = $media->file;
+
+        Storage::disk('public')->delete($file->path);
+
+        $media->delete();
+
+        $file->delete();
+
+        return response()->json([
+            'message' => 'Media deleted successfully',
+        ]);
     }
 }

@@ -35,5 +35,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/dashboard', [DashboardController::class, 'index']);
 
             Route::post('/items/{item}/media', [MediaController::class, 'store']);
+
+            Route::delete('/items/{item}/media/{media}', [MediaController::class, 'destroy']);
         });
 });
