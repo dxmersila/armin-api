@@ -10,6 +10,13 @@ class File extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'name',
+        'path',
+        'mime_type',
+        'size',
+    ];
+
     public function media(): HasMany
     {
         return $this->hasMany(Media::class);

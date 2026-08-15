@@ -10,6 +10,13 @@ class Media extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'item_id',
+        'file_id',
+        'is_primary',
+        'sort_order',
+    ];
+
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);

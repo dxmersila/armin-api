@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ItemController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
+use App\Http\Controllers\Api\V1\Admin\MediaController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -27,9 +28,12 @@ Route::prefix('v1')->group(function () {
         });
     });
 
+    // Admin
     Route::middleware(['auth:sanctum', 'admin'])
         ->prefix('admin')
         ->group(function () {
             Route::get('/dashboard', [DashboardController::class, 'index']);
+
+            Route::post('/items/{item}/media', [MediaController::class, 'store']);
         });
 });
