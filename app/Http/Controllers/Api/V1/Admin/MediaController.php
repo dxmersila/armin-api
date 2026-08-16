@@ -33,10 +33,20 @@ class MediaController extends Controller
             'size' => $uploadedFile->getSize(),
         ]);
 
+        $isPrimary = $request->boolean('is_primary');
+
+        if ($isPrimary) {
+            $item->media()
+                ->where('is_primary', true)
+                ->update([
+                    'is_primary' => false,
+                ]);
+        }
+
         $media = Media::create([
             'item_id' => $item->id,
             'file_id' => $file->id,
-            'is_primary' => $request->boolean('is_primary'),
+            'is_primary' => $isPrimary,
             'sort_order' => $request->integer('sort_order'),
         ]);
 

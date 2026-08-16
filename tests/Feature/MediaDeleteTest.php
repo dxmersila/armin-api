@@ -25,7 +25,6 @@ class MediaDeleteTest extends TestCase
         $response->assertStatus(401);
     }
 
-
     public function test_regular_user_cannot_delete_media(): void
     {
         $user = User::factory()->create([
@@ -50,11 +49,20 @@ class MediaDeleteTest extends TestCase
 
         $response = $this
             ->actingAs($user, 'sanctum')
-            ->deleteJson("/api/v1/admin/items/{$item->id}/media/{$media->id}");
+            ->deleteJson(
+                "/api/v1/admin/items/{$item->id}/media/{$media->id}"
+            );
 
         $response->assertStatus(403);
-    }
 
+        $this->assertDatabaseHas('media', [
+            'id' => $media->id,
+        ]);
+
+        $this->assertDatabaseHas('files', [
+            'id' => $file->id,
+        ]);
+    }
 
     public function test_admin_can_delete_media(): void
     {
@@ -109,5 +117,59 @@ class MediaDeleteTest extends TestCase
         $disk = Storage::disk('public');
 
         $disk->assertMissing('media/test.jpg');
+    }
+
+    public function test_admin_cannot_delete_media_from_wrong_item(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $item = Item::factory()->create();
+
+        $anotherItem = Item::factory()->create();
+
+        $file = File::create([
+            'name' => 'test.jpg',
+            'path' => 'media/test.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 1000,
+        ]);
+
+        Storage::disk('public')->put(
+            'media/test.jpg',
+            'dummy content'
+        );
+
+        $media = Media::create([
+            'item_id' => $anotherItem->id,
+            'file_id' => $file->id,
+            'is_primary' => true,
+            'sort_order' => 0,
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->deleteJson(
+                "/api/v1/admin/items/{$item->id}/media/{$media->id}"
+            );
+
+        $response->assertStatus(404);
+
+        $this->assertDatabaseHas('media', [
+            'id' => $media->id,
+            'item_id' => $anotherItem->id,
+        ]);
+
+        $this->assertDatabaseHas('files', [
+            'id' => $file->id,
+        ]);
+
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+
+        $disk->assertExists('media/test.jpg');
     }
 }
