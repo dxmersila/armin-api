@@ -16,6 +16,7 @@ class Item extends Model
         'slug',
         'description',
         'is_visible',
+        'access_type',
     ];
 
     protected $casts = [

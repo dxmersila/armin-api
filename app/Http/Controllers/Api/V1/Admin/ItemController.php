@@ -45,6 +45,7 @@ class ItemController extends Controller
             $data['slug'] = $data['slug'] ?? Str::slug($data['title']);
 
             $data['is_visible'] = $data['is_visible'] ?? false;
+            $data['access_type'] = $data['access_type'] ?? 'free';
 
             $categories = $data['categories'] ?? [];
             $tags = $data['tags'] ?? [];

@@ -47,6 +47,14 @@ class UpdateItemRequest extends FormRequest
                 'boolean',
             ],
 
+            'access_type' => [
+                'sometimes',
+                Rule::in([
+                    'free',
+                    'paid',
+                ]),
+            ],
+
             'categories' => [
                 'sometimes',
                 'array',

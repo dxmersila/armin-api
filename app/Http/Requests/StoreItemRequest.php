@@ -44,6 +44,14 @@ class StoreItemRequest extends FormRequest
                 'boolean',
             ],
 
+            'access_type' => [
+                'nullable',
+                Rule::in([
+                    'free',
+                    'paid',
+                ]),
+            ],
+
             'categories' => [
                 'nullable',
                 'array',
