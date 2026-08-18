@@ -37,4 +37,9 @@ class Item extends Model
     {
         return $this->hasMany(Media::class);
     }
+
+    public function accesses(): HasMany
+    {
+        return $this->hasMany(Access::class);
+    }
 }

@@ -5,7 +5,11 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ItemResource;
 use App\Models\Item;
+use App\Models\User;
 use App\Http\Requests\ItemIndexRequest;
+use App\Services\AccessResolver;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ItemController extends Controller
@@ -65,5 +69,22 @@ class ItemController extends Controller
         ]);
 
         return new ItemResource($item);
+    }
+
+    public function access(Request $request, Item $item, AccessResolver $accessResolver): JsonResponse
+    {
+        abort_unless($item->is_visible, 404);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        abort_unless(
+            $accessResolver->canAccess($user, $item),
+            403
+        );
+
+        return response()->json([
+            'message' => 'Item access granted.',
+        ]);
     }
 }
