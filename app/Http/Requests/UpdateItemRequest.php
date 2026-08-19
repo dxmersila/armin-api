@@ -42,6 +42,12 @@ class UpdateItemRequest extends FormRequest
                 'string',
             ],
 
+            'content' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
             'is_visible' => [
                 'sometimes',
                 'boolean',

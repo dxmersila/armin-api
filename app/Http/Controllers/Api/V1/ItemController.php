@@ -87,4 +87,24 @@ class ItemController extends Controller
             'message' => 'Item access granted.',
         ]);
     }
+
+    public function content(
+        Request $request,
+        Item $item,
+        AccessResolver $accessResolver
+    ): JsonResponse {
+        abort_unless($item->is_visible, 404);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        abort_unless(
+            $accessResolver->canAccess($user, $item),
+            403
+        );
+
+        return response()->json([
+            'content' => $item->content,
+        ]);
+    }
 }

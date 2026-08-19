@@ -57,6 +57,7 @@ class AdminItemUpdateTest extends TestCase
             'title' => 'Original Title',
             'slug' => 'original-title',
             'description' => 'Original description',
+            'content' => 'Original protected content',
             'is_visible' => false,
         ]);
 
@@ -68,6 +69,7 @@ class AdminItemUpdateTest extends TestCase
                     'title' => 'Updated Title',
                     'slug' => 'updated-title',
                     'description' => 'Updated description',
+                    'content' => 'Updated protected content',
                     'is_visible' => true,
                 ]
             );
@@ -80,6 +82,7 @@ class AdminItemUpdateTest extends TestCase
                     'title',
                     'slug',
                     'description',
+                    'content',
                     'is_visible',
                     'categories',
                     'tags',
@@ -92,6 +95,7 @@ class AdminItemUpdateTest extends TestCase
             'title' => 'Updated Title',
             'slug' => 'updated-title',
             'description' => 'Updated description',
+            'content' => 'Updated protected content',
             'is_visible' => true,
         ]);
     }

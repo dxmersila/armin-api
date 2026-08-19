@@ -51,6 +51,7 @@ class AdminItemCreateTest extends TestCase
             ->postJson('/api/v1/admin/items', [
                 'title' => 'Test Item',
                 'description' => 'Test item description.',
+                'content' => 'Test item protected content.',
                 'categories' => [$category->id],
                 'tags' => [$tag->id],
             ]);
@@ -74,6 +75,7 @@ class AdminItemCreateTest extends TestCase
                     'title' => 'Test Item',
                     'slug' => 'test-item',
                     'description' => 'Test item description.',
+                    'content' => 'Test item protected content.',
                     'is_visible' => false,
                 ],
             ]);
@@ -84,6 +86,7 @@ class AdminItemCreateTest extends TestCase
             'id' => $item->id,
             'title' => 'Test Item',
             'slug' => 'test-item',
+            'content' => 'Test item protected content.',
             'is_visible' => false,
         ]);
 
