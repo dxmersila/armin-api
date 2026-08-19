@@ -39,6 +39,11 @@ class StoreItemRequest extends FormRequest
                 'string',
             ],
 
+            'content' => [
+                'nullable',
+                'string',
+            ],
+
             'is_visible' => [
                 'nullable',
                 'boolean',

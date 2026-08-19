@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreItemRequest;
 use App\Http\Requests\UpdateItemRequest;
-use App\Http\Resources\ItemResource;
+use App\Http\Resources\AdminItemResource;
 use App\Models\Item;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -30,7 +30,7 @@ class ItemController extends Controller
             ->latest()
             ->paginate(15);
 
-        return ItemResource::collection($items);
+        return AdminItemResource::collection($items);
     }
 
     /**
@@ -62,7 +62,7 @@ class ItemController extends Controller
 
         $item->load(self::RELATIONS);
 
-        return (new ItemResource($item))
+        return (new AdminItemResource($item))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
@@ -70,18 +70,20 @@ class ItemController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Item $item): ItemResource
+    public function show(Item $item): AdminItemResource
     {
         $item->load(self::RELATIONS);
 
-        return new ItemResource($item);
+        return new AdminItemResource($item);
     }
 
     /**
      * Update the specified resource.
      */
-    public function update(UpdateItemRequest $request, Item $item): JsonResponse
-    {
+    public function update(
+        UpdateItemRequest $request,
+        Item $item
+    ): JsonResponse {
         DB::transaction(function () use ($request, $item) {
 
             $data = $request->validated();
@@ -104,7 +106,7 @@ class ItemController extends Controller
 
         $item->load(self::RELATIONS);
 
-        return (new ItemResource($item))
+        return (new AdminItemResource($item))
             ->response()
             ->setStatusCode(Response::HTTP_OK);
     }

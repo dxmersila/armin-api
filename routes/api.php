@@ -13,6 +13,12 @@ Route::prefix('v1')->group(function () {
     // Items
     Route::get('/items', [ItemController::class, 'index']);
     Route::get('/items/{item:slug}', [ItemController::class, 'show']);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get(
+            '/items/{item:slug}/content',
+            [ItemController::class, 'content']
+        );
+    });
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/items/{item:slug}/access', [ItemController::class, 'access']);

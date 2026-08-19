@@ -15,6 +15,7 @@ class Item extends Model
         'title',
         'slug',
         'description',
+        'content',
         'is_visible',
         'access_type',
     ];
