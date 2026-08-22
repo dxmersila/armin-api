@@ -22,6 +22,7 @@ class ItemFactory extends Factory
             'slug' => fake()->unique()->slug(),
             'description' => fake()->paragraph(),
             'is_visible' => true,
+            'price' => 0,
         ];
     }
 }

@@ -61,6 +61,12 @@ class UpdateItemRequest extends FormRequest
                 ]),
             ],
 
+            'price' => [
+                'sometimes',
+                'integer',
+                'min:0',
+            ],
+
             'categories' => [
                 'sometimes',
                 'array',

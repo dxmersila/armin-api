@@ -52,6 +52,7 @@ class AdminItemCreateTest extends TestCase
                 'title' => 'Test Item',
                 'description' => 'Test item description.',
                 'content' => 'Test item protected content.',
+                'price' => 250000,
                 'categories' => [$category->id],
                 'tags' => [$tag->id],
             ]);
@@ -65,6 +66,7 @@ class AdminItemCreateTest extends TestCase
                     'slug',
                     'description',
                     'is_visible',
+                    'price',
                     'categories',
                     'tags',
                     'media',
@@ -98,6 +100,11 @@ class AdminItemCreateTest extends TestCase
         $this->assertDatabaseHas('item_tag', [
             'item_id' => $item->id,
             'tag_id' => $tag->id,
+        ]);
+
+        $this->assertDatabaseHas('items', [
+            'id' => $item->id,
+            'price' => 250000,
         ]);
     }
 }

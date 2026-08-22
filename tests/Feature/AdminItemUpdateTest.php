@@ -54,11 +54,11 @@ class AdminItemUpdateTest extends TestCase
         ]);
 
         $item = Item::factory()->create([
-            'title' => 'Original Title',
-            'slug' => 'original-title',
-            'description' => 'Original description',
-            'content' => 'Original protected content',
-            'is_visible' => false,
+            'title' => 'Updated Title',
+            'slug' => 'updated-title',
+            'description' => 'Updated description',
+            'is_visible' => true,
+            'price' => 500000,
         ]);
 
         $response = $this
@@ -87,6 +87,7 @@ class AdminItemUpdateTest extends TestCase
                     'categories',
                     'tags',
                     'media',
+                    'price',
                 ],
             ]);
 
@@ -97,6 +98,11 @@ class AdminItemUpdateTest extends TestCase
             'description' => 'Updated description',
             'content' => 'Updated protected content',
             'is_visible' => true,
+        ]);
+
+        $this->assertDatabaseHas('items', [
+            'id' => $item->id,
+            'price' => 500000,
         ]);
     }
 
@@ -294,6 +300,33 @@ class AdminItemUpdateTest extends TestCase
             'id' => $item->id,
             'slug' => 'my-own-slug',
             'title' => 'Updated Title',
+        ]);
+    }
+
+    public function test_admin_can_update_price(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $item = Item::factory()->create([
+            'price' => 100000,
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->putJson(
+                "/api/v1/admin/items/{$item->id}",
+                [
+                    'price' => 250000,
+                ]
+            );
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('items', [
+            'id' => $item->id,
+            'price' => 250000,
         ]);
     }
 
