@@ -57,6 +57,12 @@ class StoreItemRequest extends FormRequest
                 ]),
             ],
 
+            'price' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
+
             'categories' => [
                 'nullable',
                 'array',

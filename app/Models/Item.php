@@ -18,10 +18,12 @@ class Item extends Model
         'content',
         'is_visible',
         'access_type',
+        'price',
     ];
 
     protected $casts = [
         'is_visible' => 'boolean',
+        'price' => 'integer',
     ];
 
     public function categories(): BelongsToMany
