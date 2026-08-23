@@ -21,4 +21,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn(Request $request) => $request->is('api/*'),
         );
-    })->create();
+
+        $exceptions->render(function (
+            \InvalidArgumentException $exception,
+            Request $request
+        ) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => $exception->getMessage(),
+                ], 422);
+            }
+        });
+    })
+    ->create();

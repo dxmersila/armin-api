@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ItemController;
 use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
@@ -43,6 +44,12 @@ Route::prefix('v1')->group(function () {
     // Orders
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/orders', [OrderController::class, 'store']);
+    });
+
+    // Payments
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/orders/{order}/payments', [PaymentController::class, 'store']);
+        Route::post('/payments/{payment}/process', [PaymentController::class, 'process']);
     });
 
     // Dashboard / Admin
