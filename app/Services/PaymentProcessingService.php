@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Services;
+
+use App\Contracts\PaymentGateway;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Models\Payment;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+
+class PaymentProcessingService
+{
+    public function __construct(
+        protected PaymentGateway $gateway,
+        protected AccessGrantService $accessGrantService,
+    ) {}
+
+    public function process(Payment $payment): Payment
+    {
+        if ($payment->status !== PaymentStatus::PENDING) {
+            throw new InvalidArgumentException(
+                'Only pending payments can be processed.'
+            );
+        }
+
+        return DB::transaction(function () use ($payment) {
+            $successful = $this->gateway->pay($payment);
+
+            if ($successful) {
+                $payment->update([
+                    'status' => PaymentStatus::PAID,
+                ]);
+
+                $order = $payment->order;
+
+                $order->update([
+                    'status' => OrderStatus::PAID,
+                ]);
+
+                $this->accessGrantService->grantForOrder($order);
+            } else {
+                $payment->update([
+                    'status' => PaymentStatus::FAILED,
+                ]);
+            }
+
+            return $payment->fresh();
+        });
+    }
+}
