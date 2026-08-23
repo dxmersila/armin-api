@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ItemController;
+use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
@@ -37,6 +38,11 @@ Route::prefix('v1')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
             Route::get('/me', [AuthController::class, 'me']);
         });
+    });
+
+    // Orders
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/orders', [OrderController::class, 'store']);
     });
 
     // Dashboard / Admin
