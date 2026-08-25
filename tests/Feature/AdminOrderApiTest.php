@@ -201,4 +201,47 @@ class AdminOrderApiTest extends TestCase
             ->getJson('/api/v1/admin/orders/999999')
             ->assertNotFound();
     }
+
+    public function test_admin_can_filter_orders_by_status(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $pendingOrder = Order::factory()->create([
+            'status' => OrderStatus::PENDING,
+        ]);
+
+        $paidOrder = Order::factory()->create([
+            'status' => OrderStatus::PAID,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->getJson('/api/v1/admin/orders?status=pending');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $pendingOrder->id)
+            ->assertJsonPath(
+                'data.0.status',
+                OrderStatus::PENDING->value
+            );
+
+        $response->assertJsonMissing([
+            'id' => $paidOrder->id,
+        ]);
+    }
+
+    public function test_admin_order_list_rejects_invalid_status(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson('/api/v1/admin/orders?status=something-invalid')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
+    }
 }
