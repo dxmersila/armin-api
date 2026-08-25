@@ -21,6 +21,12 @@ class AdminOrderIndexRequest extends FormRequest
                 'string',
                 new Enum(OrderStatus::class),
             ],
+
+            'user_id' => [
+                'sometimes',
+                'integer',
+                'exists:users,id',
+            ],
         ];
     }
 }

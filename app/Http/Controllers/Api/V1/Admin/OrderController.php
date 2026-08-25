@@ -16,7 +16,17 @@ class OrderController extends Controller
         $query = Order::query();
 
         if ($request->filled('status')) {
-            $query->where('status', $request->string('status')->value);
+            $query->where(
+                'status',
+                $request->string('status')->value
+            );
+        }
+
+        if ($request->filled('user_id')) {
+            $query->where(
+                'user_id',
+                $request->integer('user_id')
+            );
         }
 
         $orders = $query

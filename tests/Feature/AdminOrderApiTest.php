@@ -244,4 +244,45 @@ class AdminOrderApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['status']);
     }
+
+    public function test_admin_can_filter_orders_by_user_id(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $user = User::factory()->create();
+        $anotherUser = User::factory()->create();
+
+        $userOrder = Order::factory()->create([
+            'user_id' => $user->id,
+            'status' => OrderStatus::PENDING,
+        ]);
+
+        Order::factory()->create([
+            'user_id' => $anotherUser->id,
+            'status' => OrderStatus::PENDING,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->getJson("/api/v1/admin/orders?user_id={$user->id}");
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $userOrder->id)
+            ->assertJsonPath('data.0.user_id', $user->id);
+    }
+
+    public function test_admin_order_list_rejects_invalid_user_id(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson('/api/v1/admin/orders?user_id=999999')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['user_id']);
+    }
 }
