@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use App\Enums\OrderStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
+use App\Enums\PaymentStatus;
+use Illuminate\Validation\Rule;
 
 class AdminOrderIndexRequest extends FormRequest
 {
@@ -26,6 +28,11 @@ class AdminOrderIndexRequest extends FormRequest
                 'sometimes',
                 'integer',
                 'exists:users,id',
+            ],
+
+            'payment_status' => [
+                'sometimes',
+                Rule::enum(PaymentStatus::class),
             ],
         ];
     }

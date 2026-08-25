@@ -29,6 +29,15 @@ class OrderController extends Controller
             );
         }
 
+        if ($request->filled('payment_status')) {
+            $query->whereHas('payments', function ($query) use ($request) {
+                $query->where(
+                    'status',
+                    $request->string('payment_status')->value
+                );
+            });
+        }
+
         $orders = $query
             ->latest()
             ->paginate();
