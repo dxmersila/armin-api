@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Item;
 use App\Models\User;
+use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -247,5 +248,89 @@ class OrderApiTest extends TestCase
             ->assertJsonValidationErrors(['item_ids']);
 
         $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_authenticated_user_can_list_own_orders(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $firstItem = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 100000,
+        ]);
+
+        $secondItem = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 200000,
+        ]);
+
+        $otherItem = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 300000,
+        ]);
+
+        $olderOrder = Order::factory()->create([
+            'user_id' => $user->id,
+            'total_price' => 100000,
+        ]);
+
+        $olderOrder->orderItems()->create([
+            'item_id' => $firstItem->id,
+            'price' => 100000,
+        ]);
+
+        $newerOrder = Order::factory()->create([
+            'user_id' => $user->id,
+            'total_price' => 200000,
+        ]);
+
+        $newerOrder->orderItems()->create([
+            'item_id' => $secondItem->id,
+            'price' => 200000,
+        ]);
+
+        $otherOrder = Order::factory()->create([
+            'user_id' => $otherUser->id,
+            'total_price' => 300000,
+        ]);
+
+        $otherOrder->orderItems()->create([
+            'item_id' => $otherItem->id,
+            'price' => 300000,
+        ]);
+
+        $olderOrder->update([
+            'created_at' => now()->subDay(),
+        ]);
+
+        $newerOrder->update([
+            'created_at' => now()->addSecond(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/orders');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.id', $newerOrder->id)
+            ->assertJsonPath('data.1.id', $olderOrder->id)
+            ->assertJsonPath('data.0.user_id', $user->id)
+            ->assertJsonPath('data.1.user_id', $user->id)
+            ->assertJsonPath('data.0.items.0.item_id', $secondItem->id)
+            ->assertJsonPath('data.1.items.0.item_id', $firstItem->id);
+
+        $response->assertJsonMissing([
+            'id' => $otherOrder->id,
+        ]);
+    }
+
+    public function test_guest_cannot_list_orders(): void
+    {
+        $response = $this->getJson('/api/v1/orders');
+
+        $response->assertUnauthorized();
     }
 }
