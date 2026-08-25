@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Order;
 use App\Models\Item;
 use App\Models\User;
-use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
