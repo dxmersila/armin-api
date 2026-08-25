@@ -11,8 +11,21 @@ class OrderController extends Controller
 {
     public function index(): AnonymousResourceCollection
     {
-        $orders = Order::latest()->paginate();
+        $orders = Order::query()
+            ->latest()
+            ->paginate();
 
         return AdminOrderResource::collection($orders);
+    }
+
+    public function show(Order $order): AdminOrderResource
+    {
+        $order->load([
+            'user',
+            'orderItems.item',
+            'payments',
+        ]);
+
+        return new AdminOrderResource($order);
     }
 }

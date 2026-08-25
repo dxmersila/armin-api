@@ -110,4 +110,95 @@ class AdminOrderApiTest extends TestCase
             ->assertJsonPath('meta.per_page', 15)
             ->assertJsonCount(15, 'data');
     }
+
+    public function test_admin_can_view_order_details(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $user = User::factory()->create([
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+        ]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'status' => OrderStatus::PENDING,
+            'total_price' => 150000,
+        ]);
+
+        $item = \App\Models\Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 150000,
+        ]);
+
+        $orderItem = \App\Models\OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'item_id' => $item->id,
+            'price' => 150000,
+        ]);
+
+        $payment = \App\Models\Payment::factory()->create([
+            'order_id' => $order->id,
+            'status' => \App\Enums\PaymentStatus::PENDING,
+            'amount' => 150000,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->getJson("/api/v1/admin/orders/{$order->id}");
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.id', $order->id)
+            ->assertJsonPath('data.user_id', $user->id)
+            ->assertJsonPath('data.status', OrderStatus::PENDING->value)
+            ->assertJsonPath('data.total_price', 150000);
+
+        $response->assertJsonStructure([
+            'data' => [
+                'id',
+                'user_id',
+                'status',
+                'total_price',
+                'created_at',
+                'updated_at',
+                'user',
+                'items',
+                'payments',
+            ],
+        ]);
+    }
+
+    public function test_guest_cannot_view_order_details(): void
+    {
+        $order = Order::factory()->create();
+
+        $this->getJson("/api/v1/admin/orders/{$order->id}")
+            ->assertUnauthorized();
+    }
+
+    public function test_regular_user_cannot_view_order_details(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'user',
+        ]);
+
+        $order = Order::factory()->create();
+
+        $this->actingAs($user)
+            ->getJson("/api/v1/admin/orders/{$order->id}")
+            ->assertForbidden();
+    }
+
+    public function test_admin_cannot_view_non_existing_order(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson('/api/v1/admin/orders/999999')
+            ->assertNotFound();
+    }
 }

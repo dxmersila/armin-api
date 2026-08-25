@@ -62,6 +62,7 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('items', AdminItemController::class);
 
             Route::get('/orders', [AdminOrderController::class, 'index']);
+            Route::get('/orders/{order}', [AdminOrderController::class, 'show']);
 
             Route::post('/items/{item}/media', [MediaController::class, 'store']);
             Route::delete('/items/{item}/media/{media}', [MediaController::class, 'destroy']);

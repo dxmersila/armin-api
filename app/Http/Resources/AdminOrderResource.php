@@ -19,6 +19,19 @@ class AdminOrderResource extends JsonResource
             'user_id' => $this->user_id,
             'status' => $this->status->value,
             'total_price' => $this->total_price,
+
+            'user' => new UserResource(
+                $this->whenLoaded('user')
+            ),
+
+            'items' => OrderItemResource::collection(
+                $this->whenLoaded('orderItems')
+            ),
+
+            'payments' => PaymentResource::collection(
+                $this->whenLoaded('payments')
+            ),
+
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
