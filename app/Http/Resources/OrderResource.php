@@ -24,6 +24,10 @@ class OrderResource extends JsonResource
                 $this->whenLoaded('orderItems')
             ),
 
+            'payments' => PaymentResource::collection(
+                $this->whenLoaded('payments')
+            ),
+
             'created_at' => $this->created_at,
         ];
     }

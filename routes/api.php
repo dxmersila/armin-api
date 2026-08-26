@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
+use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -43,7 +44,9 @@ Route::prefix('v1')->group(function () {
 
     // Orders
     Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/orders', [OrderController::class, 'index']);
         Route::post('/orders', [OrderController::class, 'store']);
+        Route::get('/orders/{order}', [OrderController::class, 'show']);
     });
 
     // Payments
@@ -59,6 +62,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/dashboard', [DashboardController::class, 'index']);
 
             Route::apiResource('items', AdminItemController::class);
+
+            Route::get('/orders', [AdminOrderController::class, 'index']);
+            Route::get('/orders/{order}', [AdminOrderController::class, 'show']);
 
             Route::post('/items/{item}/media', [MediaController::class, 'store']);
             Route::delete('/items/{item}/media/{media}', [MediaController::class, 'destroy']);
