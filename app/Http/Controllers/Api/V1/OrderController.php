@@ -26,6 +26,23 @@ class OrderController extends Controller
         return OrderResource::collection($orders);
     }
 
+    public function show(
+        Order $order,
+        Request $request
+    ): OrderResource {
+        abort_unless(
+            $order->user_id === $request->user()->id,
+            404
+        );
+
+        $order->load([
+            'orderItems.item',
+            'payments',
+        ]);
+
+        return new OrderResource($order);
+    }
+
     public function store(
         CreateOrderRequest $request,
         OrderCreationService $orderCreationService
