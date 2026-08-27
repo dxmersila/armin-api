@@ -11,6 +11,11 @@ use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use App\Contracts\PaymentGateway;
+use App\Enums\OrderType;
+use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
+use Carbon\Carbon;
 
 class PaymentApiTest extends TestCase
 {
@@ -210,5 +215,94 @@ class PaymentApiTest extends TestCase
         $this->actingAs($user)
             ->postJson("/api/v1/payments/{$payment->id}/process")
             ->assertUnprocessable();
+    }
+
+    public function test_user_can_complete_subscription_purchase_flow(): void
+    {
+        Carbon::setTestNow('2026-08-27 12:00:00');
+
+        $user = User::factory()->create();
+
+        $plan = SubscriptionPlan::factory()->create([
+            'name' => '3 Months',
+            'duration_months' => 3,
+            'price' => 300000,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user);
+
+        // 1. Create subscription order.
+        $orderResponse = $this->postJson('/api/v1/orders', [
+            'type' => OrderType::SUBSCRIPTION->value,
+            'subscription_plan_id' => $plan->id,
+        ]);
+
+        $orderResponse
+            ->assertCreated()
+            ->assertJsonPath('data.type', OrderType::SUBSCRIPTION->value)
+            ->assertJsonPath('data.status', OrderStatus::PENDING->value)
+            ->assertJsonPath('data.total_price', 300000);
+
+        $orderId = $orderResponse->json('data.id');
+
+        // 2. Create payment for the pending order.
+        $paymentResponse = $this->postJson(
+            "/api/v1/orders/{$orderId}/payments"
+        );
+
+        $paymentResponse
+            ->assertCreated()
+            ->assertJsonPath('data.order_id', $orderId)
+            ->assertJsonPath(
+                'data.status',
+                PaymentStatus::PENDING->value
+            )
+            ->assertJsonPath('data.amount', 300000);
+
+        $paymentId = $paymentResponse->json('data.id');
+
+        // 3. Force the gateway to simulate a successful payment.
+        $gateway = $this->mock(PaymentGateway::class);
+
+        $gateway
+            ->shouldReceive('pay')
+            ->once()
+            ->andReturn(true);
+
+        // 4. Process the payment.
+        $processResponse = $this->postJson(
+            "/api/v1/payments/{$paymentId}/process"
+        );
+
+        $processResponse
+            ->assertOk()
+            ->assertJsonPath(
+                'data.status',
+                PaymentStatus::PAID->value
+            );
+
+        // 5. Verify the order is paid.
+        $this->assertDatabaseHas('orders', [
+            'id' => $orderId,
+            'user_id' => $user->id,
+            'type' => OrderType::SUBSCRIPTION->value,
+            'subscription_plan_id' => $plan->id,
+            'status' => OrderStatus::PAID->value,
+            'total_price' => 300000,
+        ]);
+
+        // 6. Verify the subscription was created.
+        $this->assertDatabaseHas('subscriptions', [
+            'user_id' => $user->id,
+            'subscription_plan_id' => $plan->id,
+            'order_id' => $orderId,
+            'starts_at' => '2026-08-27 12:00:00',
+            'ends_at' => '2026-11-27 12:00:00',
+        ]);
+
+        $this->assertTrue(
+            Subscription::where('order_id', $orderId)->exists()
+        );
     }
 }

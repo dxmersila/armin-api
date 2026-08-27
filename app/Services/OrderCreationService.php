@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Illuminate\Validation\ValidationException;
+use App\Enums\OrderType;
 
 class OrderCreationService
 {
@@ -58,6 +59,7 @@ class OrderCreationService
 
             $order = Order::create([
                 'user_id' => $user->id,
+                'type' => OrderType::ITEM,
                 'status' => 'pending',
                 'total_price' => 0,
             ]);

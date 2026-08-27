@@ -50,6 +50,7 @@ class OrderController extends Controller
         $order->load([
             'user',
             'orderItems.item',
+            'subscriptionPlan',
             'payments',
         ]);
 

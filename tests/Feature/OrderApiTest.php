@@ -9,6 +9,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 use App\Models\Payment;
+use App\Enums\OrderType;
+use App\Models\SubscriptionPlan;
+use App\Models\Subscription;
+use Carbon\Carbon;
 
 class OrderApiTest extends TestCase
 {
@@ -392,6 +396,54 @@ class OrderApiTest extends TestCase
             ->assertJsonPath('data.payments.0.status', 'pending');
     }
 
+    public function test_authenticated_user_can_view_subscription_plan_in_own_order(): void
+    {
+        $user = User::factory()->create();
+
+        $plan = SubscriptionPlan::factory()->create([
+            'name' => '1 Year',
+            'duration_months' => 12,
+            'price' => 1000000,
+            'is_active' => true,
+        ]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'type' => OrderType::SUBSCRIPTION,
+            'subscription_plan_id' => $plan->id,
+            'total_price' => 1000000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson(
+            "/api/v1/orders/{$order->id}"
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'data.type',
+                OrderType::SUBSCRIPTION->value
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.id',
+                $plan->id
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.name',
+                '1 Year'
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.duration_months',
+                12
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.price',
+                1000000
+            );
+    }
+
     public function test_user_cannot_view_another_users_order(): void
     {
         $user = User::factory()->create();
@@ -423,5 +475,256 @@ class OrderApiTest extends TestCase
 
         $this->getJson('/api/v1/orders/999999')
             ->assertNotFound();
+    }
+
+    public function test_authenticated_user_can_create_subscription_order(): void
+    {
+        $user = User::factory()->create();
+
+        $plan = SubscriptionPlan::factory()->create([
+            'price' => 300000,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/orders', [
+            'type' => OrderType::SUBSCRIPTION->value,
+            'subscription_plan_id' => $plan->id,
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.user_id', $user->id)
+            ->assertJsonPath('data.type', OrderType::SUBSCRIPTION->value)
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.total_price', 300000);
+
+        $this->assertDatabaseHas('orders', [
+            'user_id' => $user->id,
+            'type' => OrderType::SUBSCRIPTION->value,
+            'subscription_plan_id' => $plan->id,
+            'status' => 'pending',
+            'total_price' => 300000,
+        ]);
+    }
+
+    public function test_inactive_subscription_plan_cannot_be_purchased(): void
+    {
+        $user = User::factory()->create();
+
+        $plan = SubscriptionPlan::factory()->create([
+            'is_active' => false,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/orders', [
+            'type' => OrderType::SUBSCRIPTION->value,
+            'subscription_plan_id' => $plan->id,
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['subscription_plan_id']);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_order_type_must_be_valid(): void
+    {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/orders', [
+            'type' => 'invalid',
+            'item_ids' => [1],
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['type']);
+    }
+
+    public function test_subscription_order_requires_subscription_plan_id(): void
+    {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/orders', [
+            'type' => OrderType::SUBSCRIPTION->value,
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['subscription_plan_id']);
+    }
+
+    public function test_item_order_requires_item_ids(): void
+    {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/orders', [
+            'type' => OrderType::ITEM->value,
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['item_ids']);
+    }
+
+    public function test_order_rejects_fields_from_another_order_type(): void
+    {
+        $user = User::factory()->create();
+
+        $plan = SubscriptionPlan::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 100000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/orders', [
+            'type' => OrderType::SUBSCRIPTION->value,
+            'subscription_plan_id' => $plan->id,
+            'item_ids' => [$item->id],
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['item_ids']);
+    }
+
+    public function test_subscription_order_includes_subscription_plan(): void
+    {
+        $user = User::factory()->create();
+
+        $plan = SubscriptionPlan::factory()->create([
+            'name' => '3 Months',
+            'duration_months' => 3,
+            'price' => 300000,
+            'is_active' => true,
+        ]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'type' => OrderType::SUBSCRIPTION,
+            'subscription_plan_id' => $plan->id,
+            'total_price' => 300000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson(
+            "/api/v1/orders/{$order->id}"
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'data.type',
+                OrderType::SUBSCRIPTION->value
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.id',
+                $plan->id
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.name',
+                '3 Months'
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.duration_months',
+                3
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.price',
+                300000
+            );
+    }
+
+    public function test_authenticated_user_can_list_subscription_order(): void
+    {
+        $user = User::factory()->create();
+
+        $plan = SubscriptionPlan::factory()->create([
+            'name' => '3 Months',
+            'duration_months' => 3,
+            'price' => 300000,
+            'is_active' => true,
+        ]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'type' => OrderType::SUBSCRIPTION,
+            'subscription_plan_id' => $plan->id,
+            'total_price' => 300000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/orders');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $order->id)
+            ->assertJsonPath(
+                'data.0.type',
+                OrderType::SUBSCRIPTION->value
+            );
+    }
+
+    public function test_user_cannot_create_subscription_order_with_active_subscription(): void
+    {
+        Carbon::setTestNow('2026-08-26 12:00:00');
+
+        $user = User::factory()->create();
+
+        $currentPlan = SubscriptionPlan::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $newPlan = SubscriptionPlan::factory()->create([
+            'price' => 300000,
+            'is_active' => true,
+        ]);
+
+        $existingOrder = Order::factory()->create([
+            'user_id' => $user->id,
+            'type' => OrderType::SUBSCRIPTION,
+            'subscription_plan_id' => $currentPlan->id,
+        ]);
+
+        Subscription::factory()->create([
+            'user_id' => $user->id,
+            'order_id' => $existingOrder->id,
+            'subscription_plan_id' => $currentPlan->id,
+            'starts_at' => '2026-08-01 12:00:00',
+            'ends_at' => '2026-11-01 12:00:00',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/orders', [
+            'type' => OrderType::SUBSCRIPTION->value,
+            'subscription_plan_id' => $newPlan->id,
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['subscription_plan_id']);
+
+        $this->assertDatabaseCount(
+            'orders',
+            1
+        );
     }
 }

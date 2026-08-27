@@ -14,8 +14,18 @@ class AccessResolver
             return true;
         }
 
-        return Access::where('user_id', $user->id)
+        $hasDirectAccess = Access::query()
+            ->where('user_id', $user->id)
             ->where('item_id', $item->id)
+            ->exists();
+
+        if ($hasDirectAccess) {
+            return true;
+        }
+
+        return $user->subscriptions()
+            ->where('starts_at', '<=', now())
+            ->where('ends_at', '>', now())
             ->exists();
     }
 }

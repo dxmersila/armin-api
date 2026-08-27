@@ -11,6 +11,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
+use App\Enums\OrderType;
+use App\Models\SubscriptionPlan;
+use App\Services\SubscriptionOrderCreationService;
 
 class OrderController extends Controller
 {
@@ -37,6 +40,7 @@ class OrderController extends Controller
 
         $order->load([
             'orderItems.item',
+            'subscriptionPlan',
             'payments',
         ]);
 
@@ -45,15 +49,26 @@ class OrderController extends Controller
 
     public function store(
         CreateOrderRequest $request,
-        OrderCreationService $orderCreationService
+        OrderCreationService $orderCreationService,
+        SubscriptionOrderCreationService $subscriptionOrderCreationService,
     ): JsonResponse {
-        $order = $orderCreationService->create(
-            $request->user(),
-            $request->validated('item_ids')
-        );
+        $order = match ($request->validated('type')) {
+            OrderType::ITEM->value => $orderCreationService->create(
+                $request->user(),
+                $request->validated('item_ids')
+            ),
+
+            OrderType::SUBSCRIPTION->value => $subscriptionOrderCreationService->create(
+                $request->user(),
+                SubscriptionPlan::query()->findOrFail(
+                    $request->validated('subscription_plan_id')
+                )
+            ),
+        };
 
         $order->load([
             'orderItems.item',
+            'subscriptionPlan',
         ]);
 
         return (new OrderResource($order))
