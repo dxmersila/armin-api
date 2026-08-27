@@ -2,29 +2,37 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
+use App\Enums\OrderType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreateOrderRequest extends FormRequest
 {
-    /**
-     * Determine if the request is authorized.
-     */
     public function authorize(): bool
     {
         return $this->user() !== null;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'type' => $this->input('type', OrderType::ITEM->value),
+        ]);
+    }
+
     public function rules(): array
     {
         return [
+            'type' => [
+                Rule::in([
+                    OrderType::ITEM->value,
+                    OrderType::SUBSCRIPTION->value,
+                ]),
+            ],
+
             'item_ids' => [
-                'required',
+                'required_if:type,' . OrderType::ITEM->value,
+                'prohibited_unless:type,' . OrderType::ITEM->value,
                 'array',
                 'min:1',
             ],
@@ -33,6 +41,13 @@ class CreateOrderRequest extends FormRequest
                 'integer',
                 'distinct',
                 'exists:items,id',
+            ],
+
+            'subscription_plan_id' => [
+                'required_if:type,' . OrderType::SUBSCRIPTION->value,
+                'prohibited_unless:type,' . OrderType::SUBSCRIPTION->value,
+                'integer',
+                'exists:subscription_plans,id',
             ],
         ];
     }

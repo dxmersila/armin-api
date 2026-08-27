@@ -5,10 +5,12 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ItemController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Api\V1\Admin\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -47,6 +49,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/orders', [OrderController::class, 'index']);
         Route::post('/orders', [OrderController::class, 'store']);
         Route::get('/orders/{order}', [OrderController::class, 'show']);
+
+        Route::get('/subscriptions', [SubscriptionController::class, 'index']);
     });
 
     // Payments
@@ -65,6 +69,16 @@ Route::prefix('v1')->group(function () {
 
             Route::get('/orders', [AdminOrderController::class, 'index']);
             Route::get('/orders/{order}', [AdminOrderController::class, 'show']);
+
+            Route::apiResource(
+                'subscription-plans',
+                SubscriptionPlanController::class
+            )->only([
+                'index',
+                'store',
+                'show',
+                'update',
+            ]);
 
             Route::post('/items/{item}/media', [MediaController::class, 'store']);
             Route::delete('/items/{item}/media/{media}', [MediaController::class, 'destroy']);

@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
+use App\Enums\OrderType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -21,6 +22,7 @@ class OrderFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
+            'type' => OrderType::ITEM,
             'status' => OrderStatus::PENDING,
             'total_price' => 0,
         ];

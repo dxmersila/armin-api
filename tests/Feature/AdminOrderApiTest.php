@@ -9,6 +9,8 @@ use App\Models\Payment;
 use App\Enums\PaymentStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Laravel\Sanctum\Sanctum;
+use App\Models\SubscriptionPlan;
 
 class AdminOrderApiTest extends TestCase
 {
@@ -111,6 +113,32 @@ class AdminOrderApiTest extends TestCase
             ->assertJsonPath('meta.total', 20)
             ->assertJsonPath('meta.per_page', 15)
             ->assertJsonCount(15, 'data');
+    }
+
+    public function test_admin_order_list_includes_order_type(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $order = Order::factory()->create([
+            'type' => \App\Enums\OrderType::SUBSCRIPTION,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->getJson('/api/v1/admin/orders');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'data.0.id',
+                $order->id
+            )
+            ->assertJsonPath(
+                'data.0.type',
+                \App\Enums\OrderType::SUBSCRIPTION->value
+            );
     }
 
     public function test_admin_can_view_order_details(): void
@@ -374,5 +402,54 @@ class AdminOrderApiTest extends TestCase
             ->getJson('/api/v1/admin/orders?payment_status=something-invalid')
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['payment_status']);
+    }
+
+    public function test_admin_can_view_subscription_plan_in_order_details(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $plan = SubscriptionPlan::factory()->create([
+            'name' => '6 Months',
+            'duration_months' => 6,
+            'price' => 500000,
+            'is_active' => true,
+        ]);
+
+        $order = Order::factory()->create([
+            'type' => \App\Enums\OrderType::SUBSCRIPTION,
+            'subscription_plan_id' => $plan->id,
+            'total_price' => 500000,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->getJson(
+            "/api/v1/admin/orders/{$order->id}"
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'data.type',
+                \App\Enums\OrderType::SUBSCRIPTION->value
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.id',
+                $plan->id
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.name',
+                '6 Months'
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.duration_months',
+                6
+            )
+            ->assertJsonPath(
+                'data.subscription_plan.price',
+                500000
+            );
     }
 }
