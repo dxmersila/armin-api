@@ -22,10 +22,15 @@ class SubscriptionResource extends JsonResource
                 $this->whenLoaded('subscriptionPlan')
             ),
 
+            'price' => $this->price,
+
             'starts_at' => $this->starts_at,
             'ends_at' => $this->ends_at,
 
-            'is_active' => $this->ends_at?->isFuture() ?? false,
+            'is_active' => $this->starts_at !== null
+                && $this->ends_at !== null
+                && $this->starts_at->lte(now())
+                && $this->ends_at->gt(now()),
 
             'created_at' => $this->created_at,
         ];

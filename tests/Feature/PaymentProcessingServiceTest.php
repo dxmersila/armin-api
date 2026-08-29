@@ -15,6 +15,10 @@ use App\Services\SubscriptionCreationService;
 use InvalidArgumentException;
 use RuntimeException;
 use Tests\TestCase;
+use App\Models\Item;
+use App\Models\User;
+use Carbon\Carbon;
+use App\Services\AccessGrantService;
 
 class PaymentProcessingServiceTest extends TestCase
 {
@@ -270,6 +274,52 @@ class PaymentProcessingServiceTest extends TestCase
 
         $this->assertDatabaseMissing('subscriptions', [
             'order_id' => $order->id,
+        ]);
+    }
+
+    public function test_successful_subscription_payment_does_not_grant_item_access(): void
+    {
+        Carbon::setTestNow('2026-08-27 12:00:00');
+
+        $user = User::factory()->create();
+
+        $plan = SubscriptionPlan::factory()->create([
+            'duration_months' => 3,
+            'price' => 300000,
+            'is_active' => true,
+        ]);
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 100000,
+        ]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'type' => OrderType::SUBSCRIPTION,
+            'subscription_plan_id' => $plan->id,
+            'status' => OrderStatus::PENDING,
+            'total_price' => 300000,
+        ]);
+
+        $payment = Payment::factory()->create([
+            'order_id' => $order->id,
+            'status' => PaymentStatus::PENDING,
+            'amount' => 300000,
+        ]);
+
+        $gateway = $this->mock(PaymentGateway::class);
+
+        $gateway
+            ->shouldReceive('pay')
+            ->once()
+            ->andReturn(true);
+
+        app(PaymentProcessingService::class)->process($payment);
+
+        $this->assertDatabaseMissing('accesses', [
+            'user_id' => $user->id,
+            'item_id' => $item->id,
         ]);
     }
 }

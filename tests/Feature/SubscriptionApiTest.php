@@ -44,6 +44,7 @@ class SubscriptionApiTest extends TestCase
         $subscription = Subscription::factory()->create([
             'user_id' => $user->id,
             'subscription_plan_id' => $plan->id,
+            'price' => 300000,
             'starts_at' => '2026-08-27 12:00:00',
             'ends_at' => '2026-11-27 12:00:00',
         ]);
@@ -51,6 +52,7 @@ class SubscriptionApiTest extends TestCase
         Subscription::factory()->create([
             'user_id' => $otherUser->id,
             'subscription_plan_id' => $otherPlan->id,
+            'price' => 1000000,
             'starts_at' => '2026-08-27 12:00:00',
             'ends_at' => '2027-08-27 12:00:00',
         ]);
@@ -75,6 +77,10 @@ class SubscriptionApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.0.subscription_plan.price',
+                300000
+            )
+            ->assertJsonPath(
+                'data.0.price',
                 300000
             )
             ->assertJsonPath(
@@ -103,6 +109,7 @@ class SubscriptionApiTest extends TestCase
         $subscription = Subscription::factory()->create([
             'user_id' => $user->id,
             'subscription_plan_id' => $plan->id,
+            'price' => 100000,
             'starts_at' => '2026-07-01 12:00:00',
             'ends_at' => '2026-08-01 12:00:00',
         ]);
@@ -114,6 +121,38 @@ class SubscriptionApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('data.0.id', $subscription->id)
+            ->assertJsonPath('data.0.price', 100000)
+            ->assertJsonPath('data.0.is_active', false);
+    }
+
+    public function test_future_subscription_is_not_active(): void
+    {
+        Carbon::setTestNow('2026-08-27 12:00:00');
+
+        $user = User::factory()->create();
+
+        $plan = SubscriptionPlan::factory()->create([
+            'duration_months' => 3,
+            'price' => 300000,
+            'is_active' => true,
+        ]);
+
+        $subscription = Subscription::factory()->create([
+            'user_id' => $user->id,
+            'subscription_plan_id' => $plan->id,
+            'price' => 300000,
+            'starts_at' => '2026-09-01 12:00:00',
+            'ends_at' => '2026-12-01 12:00:00',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->getJson('/api/v1/subscriptions');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $subscription->id)
+            ->assertJsonPath('data.0.price', 300000)
             ->assertJsonPath('data.0.is_active', false);
     }
 }

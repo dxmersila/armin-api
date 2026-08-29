@@ -7,7 +7,6 @@ use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Payment;
-use App\Services\SubscriptionCreationService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -47,9 +46,9 @@ class PaymentProcessingService
                         $order->subscriptionPlan,
                         $order,
                     );
+                } else {
+                    $this->accessGrantService->grantForOrder($order);
                 }
-
-                $this->accessGrantService->grantForOrder($order);
             } else {
                 $payment->update([
                     'status' => PaymentStatus::FAILED,

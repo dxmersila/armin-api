@@ -16,6 +16,7 @@ class SubscriptionFactory extends Factory
             'user_id' => User::factory(),
             'subscription_plan_id' => SubscriptionPlan::factory(),
             'order_id' => Order::factory(),
+            'price' => 100000,
             'starts_at' => now(),
             'ends_at' => now()->addMonth(),
         ];

@@ -14,11 +14,13 @@ class Subscription extends Model
         'user_id',
         'subscription_plan_id',
         'order_id',
+        'price',
         'starts_at',
         'ends_at',
     ];
 
     protected $casts = [
+        'price' => 'integer',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
     ];
