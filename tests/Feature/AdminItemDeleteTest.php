@@ -6,6 +6,9 @@ use App\Models\Category;
 use App\Models\Item;
 use App\Models\Tag;
 use App\Models\User;
+use App\Models\File;
+use App\Models\Media;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -139,5 +142,110 @@ class AdminItemDeleteTest extends TestCase
             ->deleteJson('/api/v1/admin/items/999999');
 
         $response->assertStatus(404);
+    }
+
+    public function test_deleting_item_removes_media_and_unused_file(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $item = Item::factory()->create();
+
+        $file = File::create([
+            'name' => 'test.jpg',
+            'path' => 'media/test.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 1000,
+        ]);
+
+        Storage::disk('public')->put(
+            'media/test.jpg',
+            'dummy content'
+        );
+
+        $media = Media::create([
+            'item_id' => $item->id,
+            'file_id' => $file->id,
+            'is_primary' => true,
+            'sort_order' => 0,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/admin/items/{$item->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('items', [
+            'id' => $item->id,
+        ]);
+
+        $this->assertDatabaseMissing('media', [
+            'id' => $media->id,
+        ]);
+
+        $this->assertDatabaseMissing('files', [
+            'id' => $file->id,
+        ]);
+
+        Storage::disk('public')->assertMissing('media/test.jpg');
+    }
+
+    public function test_deleting_item_does_not_remove_file_still_used_by_other_media(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $item = Item::factory()->create();
+        $anotherItem = Item::factory()->create();
+
+        $file = File::create([
+            'name' => 'shared.jpg',
+            'path' => 'media/shared.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 1000,
+        ]);
+
+        Storage::disk('public')->put(
+            'media/shared.jpg',
+            'dummy content'
+        );
+
+        $media = Media::create([
+            'item_id' => $item->id,
+            'file_id' => $file->id,
+            'is_primary' => true,
+            'sort_order' => 0,
+        ]);
+
+        $anotherMedia = Media::create([
+            'item_id' => $anotherItem->id,
+            'file_id' => $file->id,
+            'is_primary' => true,
+            'sort_order' => 0,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/admin/items/{$item->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('media', [
+            'id' => $media->id,
+        ]);
+
+        $this->assertDatabaseHas('media', [
+            'id' => $anotherMedia->id,
+            'file_id' => $file->id,
+        ]);
+
+        $this->assertDatabaseHas('files', [
+            'id' => $file->id,
+        ]);
+
+        Storage::disk('public')->assertExists('media/shared.jpg');
     }
 }

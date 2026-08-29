@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreItemRequest;
 use App\Http\Requests\UpdateItemRequest;
 use App\Http\Resources\AdminItemResource;
+use App\Models\Media;
+use App\Models\File;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Item;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -116,12 +119,36 @@ class ItemController extends Controller
      */
     public function destroy(Item $item): Response
     {
+        $mediaFiles = $item->media()
+            ->with('file')
+            ->get()
+            ->map(fn(Media $media) => [
+                'file_id' => $media->file_id,
+                'path' => $media->file->path,
+            ]);
+
         DB::transaction(function () use ($item) {
             $item->categories()->detach();
             $item->tags()->detach();
 
             $item->delete();
         });
+
+        foreach ($mediaFiles as $mediaFile) {
+            $fileStillInUse = Media::query()
+                ->where('file_id', $mediaFile['file_id'])
+                ->exists();
+
+            if ($fileStillInUse) {
+                continue;
+            }
+
+            Storage::disk('public')->delete($mediaFile['path']);
+
+            File::query()
+                ->whereKey($mediaFile['file_id'])
+                ->delete();
+        }
 
         return response()->noContent();
     }

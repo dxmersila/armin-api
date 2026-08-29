@@ -162,4 +162,84 @@ class SubscriptionOrderCreationServiceTest extends TestCase
             'total_price' => 300000,
         ]);
     }
+
+    public function test_future_subscription_does_not_block_order_creation(): void
+    {
+        Carbon::setTestNow('2026-08-27 12:00:00');
+
+        $user = User::factory()->create();
+
+        $currentPlan = SubscriptionPlan::factory()->create([
+            'price' => 100000,
+            'is_active' => true,
+        ]);
+
+        $newPlan = SubscriptionPlan::factory()->create([
+            'price' => 300000,
+            'is_active' => true,
+        ]);
+
+        $existingOrder = Order::factory()->create([
+            'user_id' => $user->id,
+            'type' => OrderType::SUBSCRIPTION,
+            'subscription_plan_id' => $currentPlan->id,
+        ]);
+
+        Subscription::factory()->create([
+            'user_id' => $user->id,
+            'subscription_plan_id' => $currentPlan->id,
+            'order_id' => $existingOrder->id,
+            'price' => 100000,
+            'starts_at' => '2026-09-01 12:00:00',
+            'ends_at' => '2026-10-01 12:00:00',
+        ]);
+
+        $order = app(SubscriptionOrderCreationService::class)
+            ->create($user, $newPlan);
+
+        $this->assertSame(
+            $newPlan->id,
+            $order->subscription_plan_id
+        );
+    }
+
+    public function test_subscription_ending_now_does_not_block_order_creation(): void
+    {
+        Carbon::setTestNow('2026-08-27 12:00:00');
+
+        $user = User::factory()->create();
+
+        $currentPlan = SubscriptionPlan::factory()->create([
+            'price' => 100000,
+            'is_active' => true,
+        ]);
+
+        $newPlan = SubscriptionPlan::factory()->create([
+            'price' => 300000,
+            'is_active' => true,
+        ]);
+
+        $existingOrder = Order::factory()->create([
+            'user_id' => $user->id,
+            'type' => OrderType::SUBSCRIPTION,
+            'subscription_plan_id' => $currentPlan->id,
+        ]);
+
+        Subscription::factory()->create([
+            'user_id' => $user->id,
+            'subscription_plan_id' => $currentPlan->id,
+            'order_id' => $existingOrder->id,
+            'price' => 100000,
+            'starts_at' => '2026-07-27 12:00:00',
+            'ends_at' => '2026-08-27 12:00:00',
+        ]);
+
+        $order = app(SubscriptionOrderCreationService::class)
+            ->create($user, $newPlan);
+
+        $this->assertSame(
+            $newPlan->id,
+            $order->subscription_plan_id
+        );
+    }
 }

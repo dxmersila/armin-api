@@ -7,9 +7,9 @@ use App\Enums\OrderType;
 use App\Models\Order;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Carbon\Carbon;
 
 class SubscriptionOrderCreationService
 {
@@ -23,8 +23,11 @@ class SubscriptionOrderCreationService
             ]);
         }
 
+        $now = Carbon::now();
+
         $activeSubscriptionExists = $user->subscriptions()
-            ->where('ends_at', '>', Carbon::now())
+            ->where('starts_at', '<=', $now)
+            ->where('ends_at', '>', $now)
             ->exists();
 
         if ($activeSubscriptionExists) {
