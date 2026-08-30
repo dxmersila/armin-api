@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Contracts\PaymentGateway;
+use App\Contracts\Payments\PaymentGatewayResult;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Access;
@@ -61,7 +62,12 @@ class PaymentAccessGrantTest extends TestCase
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
-            ->andReturn(true);
+            ->andReturn(
+                new PaymentGatewayResult(
+                    successful: true,
+                    transactionId: 'test-transaction-1',
+                )
+            );
 
         app(PaymentProcessingService::class)
             ->process($payment);
@@ -109,7 +115,12 @@ class PaymentAccessGrantTest extends TestCase
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
-            ->andReturn(false);
+            ->andReturn(
+                new PaymentGatewayResult(
+                    successful: false,
+                    transactionId: null,
+                )
+            );
 
         app(PaymentProcessingService::class)
             ->process($payment);

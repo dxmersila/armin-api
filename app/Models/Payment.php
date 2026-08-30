@@ -15,11 +15,15 @@ class Payment extends Model
         'order_id',
         'status',
         'amount',
+        'gateway',
+        'gateway_transaction_id',
+        'paid_at',
     ];
 
     protected $casts = [
         'status' => PaymentStatus::class,
         'amount' => 'integer',
+        'paid_at' => 'datetime',
     ];
 
     public function order(): BelongsTo

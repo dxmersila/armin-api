@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\User;
+use App\Contracts\Payments\PaymentGatewayResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\Contracts\PaymentGateway;
@@ -268,7 +269,12 @@ class PaymentApiTest extends TestCase
         $gateway
             ->shouldReceive('pay')
             ->once()
-            ->andReturn(true);
+            ->andReturn(
+                new PaymentGatewayResult(
+                    successful: true,
+                    transactionId: 'test-transaction-1',
+                )
+            );
 
         // 4. Process the payment.
         $processResponse = $this->postJson(

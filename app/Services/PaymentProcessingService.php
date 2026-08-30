@@ -27,11 +27,13 @@ class PaymentProcessingService
         }
 
         return DB::transaction(function () use ($payment) {
-            $successful = $this->gateway->pay($payment);
+            $result = $this->gateway->pay($payment);
 
-            if ($successful) {
+            if ($result->successful) {
                 $payment->update([
                     'status' => PaymentStatus::PAID,
+                    'gateway_transaction_id' => $result->transactionId,
+                    'paid_at' => now(),
                 ]);
 
                 $order = $payment->order;

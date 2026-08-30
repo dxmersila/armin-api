@@ -67,4 +67,30 @@ class PaymentRelationshipTest extends TestCase
             $order->total_price
         );
     }
+
+    public function test_payment_stores_gateway_data_and_casts_paid_at(): void
+    {
+        $payment = Payment::factory()->create([
+            'gateway' => 'zarinpal',
+            'gateway_transaction_id' => 'TX-123456',
+            'paid_at' => now(),
+        ]);
+
+        $payment->refresh();
+
+        $this->assertSame(
+            'zarinpal',
+            $payment->gateway
+        );
+
+        $this->assertSame(
+            'TX-123456',
+            $payment->gateway_transaction_id
+        );
+
+        $this->assertInstanceOf(
+            \Carbon\Carbon::class,
+            $payment->paid_at
+        );
+    }
 }

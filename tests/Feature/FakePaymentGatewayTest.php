@@ -19,6 +19,11 @@ class FakePaymentGatewayTest extends TestCase
 
         $result = app(FakePaymentGateway::class)->pay($payment);
 
-        $this->assertTrue($result);
+        $this->assertTrue($result->successful);
+
+        $this->assertSame(
+            'fake-' . $payment->id,
+            $result->transactionId
+        );
     }
 }

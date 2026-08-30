@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Contracts\PaymentGateway;
+use App\Contracts\Payments\PaymentGatewayResult;
 use App\Models\Payment;
 use PHPUnit\Framework\TestCase;
 
@@ -24,7 +25,7 @@ class PaymentGatewayTest extends TestCase
         );
 
         $this->assertSame(
-            'bool',
+            PaymentGatewayResult::class,
             $method->getReturnType()->getName()
         );
     }

@@ -3,22 +3,22 @@
 namespace Tests\Feature;
 
 use App\Contracts\PaymentGateway;
+use App\Contracts\Payments\PaymentGatewayResult;
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
+use App\Models\Item;
 use App\Models\Order;
 use App\Models\Payment;
-use App\Services\PaymentProcessingService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Enums\OrderType;
 use App\Models\SubscriptionPlan;
+use App\Models\User;
+use App\Services\PaymentProcessingService;
 use App\Services\SubscriptionCreationService;
+use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use RuntimeException;
 use Tests\TestCase;
-use App\Models\Item;
-use App\Models\User;
-use Carbon\Carbon;
-use App\Services\AccessGrantService;
 
 class PaymentProcessingServiceTest extends TestCase
 {
@@ -43,7 +43,10 @@ class PaymentProcessingServiceTest extends TestCase
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
-            ->andReturn(true);
+            ->andReturn(new PaymentGatewayResult(
+                successful: true,
+                transactionId: 'test-transaction-1',
+            ));
 
         $result = app(PaymentProcessingService::class)
             ->process($payment);
@@ -58,9 +61,17 @@ class PaymentProcessingServiceTest extends TestCase
             $result->order->status
         );
 
+        $this->assertSame(
+            'test-transaction-1',
+            $result->gateway_transaction_id
+        );
+
+        $this->assertNotNull($result->paid_at);
+
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
             'status' => PaymentStatus::PAID->value,
+            'gateway_transaction_id' => 'test-transaction-1',
         ]);
 
         $this->assertDatabaseHas('orders', [
@@ -88,7 +99,9 @@ class PaymentProcessingServiceTest extends TestCase
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
-            ->andReturn(false);
+            ->andReturn(new PaymentGatewayResult(
+                successful: false,
+            ));
 
         $result = app(PaymentProcessingService::class)
             ->process($payment);
@@ -102,6 +115,10 @@ class PaymentProcessingServiceTest extends TestCase
             OrderStatus::PENDING,
             $result->order->status
         );
+
+        $this->assertNull($result->gateway_transaction_id);
+
+        $this->assertNull($result->paid_at);
 
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
@@ -192,7 +209,10 @@ class PaymentProcessingServiceTest extends TestCase
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
-            ->andReturn(true);
+            ->andReturn(new PaymentGatewayResult(
+                successful: true,
+                transactionId: 'subscription-transaction-1',
+            ));
 
         $result = app(PaymentProcessingService::class)
             ->process($payment);
@@ -201,6 +221,13 @@ class PaymentProcessingServiceTest extends TestCase
             PaymentStatus::PAID,
             $result->status
         );
+
+        $this->assertSame(
+            'subscription-transaction-1',
+            $result->gateway_transaction_id
+        );
+
+        $this->assertNotNull($result->paid_at);
 
         $this->assertDatabaseHas('subscriptions', [
             'user_id' => $order->user_id,
@@ -239,7 +266,10 @@ class PaymentProcessingServiceTest extends TestCase
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
-            ->andReturn(true);
+            ->andReturn(new PaymentGatewayResult(
+                successful: true,
+                transactionId: 'rollback-transaction-1',
+            ));
 
         $subscriptionCreationService = $this->mock(
             SubscriptionCreationService::class
@@ -265,6 +295,8 @@ class PaymentProcessingServiceTest extends TestCase
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
             'status' => PaymentStatus::PENDING->value,
+            'gateway_transaction_id' => null,
+            'paid_at' => null,
         ]);
 
         $this->assertDatabaseHas('orders', [
@@ -313,7 +345,10 @@ class PaymentProcessingServiceTest extends TestCase
         $gateway
             ->shouldReceive('pay')
             ->once()
-            ->andReturn(true);
+            ->andReturn(new PaymentGatewayResult(
+                successful: true,
+                transactionId: 'subscription-access-transaction-1',
+            ));
 
         app(PaymentProcessingService::class)->process($payment);
 
@@ -321,5 +356,7 @@ class PaymentProcessingServiceTest extends TestCase
             'user_id' => $user->id,
             'item_id' => $item->id,
         ]);
+
+        Carbon::setTestNow();
     }
 }

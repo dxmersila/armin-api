@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Services\AccessGrantService;
 use App\Services\PaymentProcessingService;
+use App\Contracts\Payments\PaymentGatewayResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -65,7 +66,12 @@ class PaymentAccessTransactionTest extends TestCase
                 ->shouldReceive('pay')
                 ->once()
                 ->with($payment)
-                ->andReturn(true);
+                ->andReturn(
+                    new PaymentGatewayResult(
+                        successful: true,
+                        transactionId: 'test-transaction-1',
+                    )
+                );
         });
 
         $this->mock(AccessGrantService::class, function ($mock) use ($order) {
