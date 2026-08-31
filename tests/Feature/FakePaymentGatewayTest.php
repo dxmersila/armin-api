@@ -11,6 +11,16 @@ class FakePaymentGatewayTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_fake_gateway_has_expected_name(): void
+    {
+        $gateway = app(FakePaymentGateway::class);
+
+        $this->assertSame(
+            'fake',
+            $gateway->name()
+        );
+    }
+
     public function test_fake_gateway_successfully_pays_payment(): void
     {
         $payment = Payment::factory()->create([

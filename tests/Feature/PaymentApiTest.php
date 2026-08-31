@@ -267,6 +267,11 @@ class PaymentApiTest extends TestCase
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
+            ->shouldReceive('name')
+            ->once()
+            ->andReturn('fake');
+
+        $gateway
             ->shouldReceive('pay')
             ->once()
             ->andReturn(

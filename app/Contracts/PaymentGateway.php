@@ -7,5 +7,7 @@ use App\Models\Payment;
 
 interface PaymentGateway
 {
+    public function name(): string;
+
     public function pay(Payment $payment): PaymentGatewayResult;
 }

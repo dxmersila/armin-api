@@ -19,6 +19,17 @@ class PaymentGatewayTest extends TestCase
 
         $method = $reflection->getMethod('pay');
 
+        $this->assertTrue(
+            $reflection->hasMethod('name')
+        );
+
+        $nameMethod = $reflection->getMethod('name');
+
+        $this->assertSame(
+            'string',
+            $nameMethod->getReturnType()->getName()
+        );
+
         $this->assertSame(
             Payment::class,
             $method->getParameters()[0]->getType()->getName()

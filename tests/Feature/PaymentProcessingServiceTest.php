@@ -40,6 +40,10 @@ class PaymentProcessingServiceTest extends TestCase
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
+            ->shouldReceive('name')
+            ->once()
+            ->andReturn('fake');
+        $gateway
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
@@ -66,11 +70,17 @@ class PaymentProcessingServiceTest extends TestCase
             $result->gateway_transaction_id
         );
 
+        $this->assertSame(
+            'fake',
+            $result->gateway
+        );
+
         $this->assertNotNull($result->paid_at);
 
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
             'status' => PaymentStatus::PAID->value,
+            'gateway' => 'fake',
             'gateway_transaction_id' => 'test-transaction-1',
         ]);
 
@@ -96,6 +106,10 @@ class PaymentProcessingServiceTest extends TestCase
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
+            ->shouldReceive('name')
+            ->once()
+            ->andReturn('fake');
+        $gateway
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
@@ -118,10 +132,16 @@ class PaymentProcessingServiceTest extends TestCase
 
         $this->assertNull($result->gateway_transaction_id);
 
+        $this->assertSame(
+            'fake',
+            $result->gateway
+        );
+
         $this->assertNull($result->paid_at);
 
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
+            'gateway' => 'fake',
             'status' => PaymentStatus::FAILED->value,
         ]);
 
@@ -206,6 +226,11 @@ class PaymentProcessingServiceTest extends TestCase
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
+            ->shouldReceive('name')
+            ->once()
+            ->andReturn('fake');
+
+        $gateway
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
@@ -261,6 +286,11 @@ class PaymentProcessingServiceTest extends TestCase
         ]);
 
         $gateway = $this->mock(PaymentGateway::class);
+
+        $gateway
+            ->shouldReceive('name')
+            ->once()
+            ->andReturn('fake');
 
         $gateway
             ->shouldReceive('pay')
@@ -341,6 +371,11 @@ class PaymentProcessingServiceTest extends TestCase
         ]);
 
         $gateway = $this->mock(PaymentGateway::class);
+
+        $gateway
+            ->shouldReceive('name')
+            ->once()
+            ->andReturn('fake');
 
         $gateway
             ->shouldReceive('pay')

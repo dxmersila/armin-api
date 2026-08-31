@@ -59,6 +59,11 @@ class PaymentAccessGrantTest extends TestCase
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
+            ->shouldReceive('name')
+            ->once()
+            ->andReturn('fake');
+
+        $gateway
             ->shouldReceive('pay')
             ->once()
             ->with($payment)
@@ -110,6 +115,11 @@ class PaymentAccessGrantTest extends TestCase
         ]);
 
         $gateway = $this->mock(PaymentGateway::class);
+
+        $gateway
+            ->shouldReceive('name')
+            ->once()
+            ->andReturn('fake');
 
         $gateway
             ->shouldReceive('pay')

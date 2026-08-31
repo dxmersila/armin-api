@@ -32,6 +32,7 @@ class PaymentProcessingService
             if ($result->successful) {
                 $payment->update([
                     'status' => PaymentStatus::PAID,
+                    'gateway' => $this->gateway->name(),
                     'gateway_transaction_id' => $result->transactionId,
                     'paid_at' => now(),
                 ]);
@@ -54,6 +55,7 @@ class PaymentProcessingService
             } else {
                 $payment->update([
                     'status' => PaymentStatus::FAILED,
+                    'gateway' => $this->gateway->name(),
                 ]);
             }
 

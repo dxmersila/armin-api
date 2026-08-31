@@ -63,6 +63,11 @@ class PaymentAccessTransactionTest extends TestCase
 
         $this->mock(PaymentGateway::class, function ($mock) use ($payment) {
             $mock
+                ->shouldReceive('name')
+                ->once()
+                ->andReturn('fake');
+
+            $mock
                 ->shouldReceive('pay')
                 ->once()
                 ->with($payment)
