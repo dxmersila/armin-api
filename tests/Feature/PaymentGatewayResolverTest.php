@@ -27,6 +27,20 @@ class PaymentGatewayResolverTest extends TestCase
         );
     }
 
+    public function test_it_resolves_gateway_from_configuration(): void
+    {
+        config()->set('payment.gateway', 'fake');
+
+        $resolver = app(PaymentGatewayResolver::class);
+
+        $gateway = $resolver->resolve();
+
+        $this->assertInstanceOf(
+            FakePaymentGateway::class,
+            $gateway
+        );
+    }
+
     public function test_it_rejects_unknown_payment_gateway(): void
     {
         config()->set('payment.gateway', 'unknown');
