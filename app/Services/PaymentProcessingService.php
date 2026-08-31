@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Contracts\PaymentGateway;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
@@ -13,7 +12,7 @@ use InvalidArgumentException;
 class PaymentProcessingService
 {
     public function __construct(
-        protected PaymentGateway $gateway,
+        protected PaymentGatewayResolver $gatewayResolver,
         protected AccessGrantService $accessGrantService,
         protected SubscriptionCreationService $subscriptionCreationService,
     ) {}
@@ -27,12 +26,14 @@ class PaymentProcessingService
         }
 
         return DB::transaction(function () use ($payment) {
-            $result = $this->gateway->pay($payment);
+            $gateway = $this->gatewayResolver->resolve();
+
+            $result = $gateway->pay($payment);
 
             if ($result->successful) {
                 $payment->update([
                     'status' => PaymentStatus::PAID,
-                    'gateway' => $this->gateway->name(),
+                    'gateway' => $gateway->name(),
                     'gateway_transaction_id' => $result->transactionId,
                     'paid_at' => now(),
                 ]);
@@ -55,7 +56,7 @@ class PaymentProcessingService
             } else {
                 $payment->update([
                     'status' => PaymentStatus::FAILED,
-                    'gateway' => $this->gateway->name(),
+                    'gateway' => $gateway->name(),
                 ]);
             }
 

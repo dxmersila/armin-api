@@ -16,6 +16,7 @@ use App\Contracts\PaymentGateway;
 use App\Enums\OrderType;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
+use App\Services\PaymentGatewayResolver;
 use Carbon\Carbon;
 
 class PaymentApiTest extends TestCase
@@ -280,6 +281,13 @@ class PaymentApiTest extends TestCase
                     transactionId: 'test-transaction-1',
                 )
             );
+
+        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
+            $resolver
+                ->shouldReceive('resolve')
+                ->once()
+                ->andReturn($gateway);
+        });
 
         // 4. Process the payment.
         $processResponse = $this->postJson(

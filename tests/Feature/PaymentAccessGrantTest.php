@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\PaymentGatewayResolver;
 use App\Services\PaymentProcessingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -74,6 +75,13 @@ class PaymentAccessGrantTest extends TestCase
                 )
             );
 
+        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
+            $resolver
+                ->shouldReceive('resolve')
+                ->once()
+                ->andReturn($gateway);
+        });
+
         app(PaymentProcessingService::class)
             ->process($payment);
 
@@ -131,6 +139,13 @@ class PaymentAccessGrantTest extends TestCase
                     transactionId: null,
                 )
             );
+
+        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
+            $resolver
+                ->shouldReceive('resolve')
+                ->once()
+                ->andReturn($gateway);
+        });
 
         app(PaymentProcessingService::class)
             ->process($payment);

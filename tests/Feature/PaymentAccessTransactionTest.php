@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\AccessGrantService;
 use App\Services\PaymentProcessingService;
 use App\Contracts\Payments\PaymentGatewayResult;
+use App\Services\PaymentGatewayResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -61,22 +62,29 @@ class PaymentAccessTransactionTest extends TestCase
             'amount' => 300000,
         ]);
 
-        $this->mock(PaymentGateway::class, function ($mock) use ($payment) {
-            $mock
-                ->shouldReceive('name')
-                ->once()
-                ->andReturn('fake');
+        $gateway = $this->mock(PaymentGateway::class);
 
-            $mock
-                ->shouldReceive('pay')
+        $gateway
+            ->shouldReceive('name')
+            ->once()
+            ->andReturn('fake');
+
+        $gateway
+            ->shouldReceive('pay')
+            ->once()
+            ->with($payment)
+            ->andReturn(
+                new PaymentGatewayResult(
+                    successful: true,
+                    transactionId: 'test-transaction-1',
+                )
+            );
+
+        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
+            $resolver
+                ->shouldReceive('resolve')
                 ->once()
-                ->with($payment)
-                ->andReturn(
-                    new PaymentGatewayResult(
-                        successful: true,
-                        transactionId: 'test-transaction-1',
-                    )
-                );
+                ->andReturn($gateway);
         });
 
         $this->mock(AccessGrantService::class, function ($mock) use ($order) {

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Contracts\PaymentGateway;
+use App\Services\PaymentGatewayResolver;
 use App\Contracts\Payments\PaymentGatewayResult;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
@@ -43,6 +44,7 @@ class PaymentProcessingServiceTest extends TestCase
             ->shouldReceive('name')
             ->once()
             ->andReturn('fake');
+
         $gateway
             ->shouldReceive('pay')
             ->once()
@@ -51,6 +53,13 @@ class PaymentProcessingServiceTest extends TestCase
                 successful: true,
                 transactionId: 'test-transaction-1',
             ));
+
+        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
+            $resolver
+                ->shouldReceive('resolve')
+                ->once()
+                ->andReturn($gateway);
+        });
 
         $result = app(PaymentProcessingService::class)
             ->process($payment);
@@ -116,6 +125,13 @@ class PaymentProcessingServiceTest extends TestCase
             ->andReturn(new PaymentGatewayResult(
                 successful: false,
             ));
+
+        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
+            $resolver
+                ->shouldReceive('resolve')
+                ->once()
+                ->andReturn($gateway);
+        });
 
         $result = app(PaymentProcessingService::class)
             ->process($payment);
@@ -239,6 +255,13 @@ class PaymentProcessingServiceTest extends TestCase
                 transactionId: 'subscription-transaction-1',
             ));
 
+        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
+            $resolver
+                ->shouldReceive('resolve')
+                ->once()
+                ->andReturn($gateway);
+        });
+
         $result = app(PaymentProcessingService::class)
             ->process($payment);
 
@@ -300,6 +323,13 @@ class PaymentProcessingServiceTest extends TestCase
                 successful: true,
                 transactionId: 'rollback-transaction-1',
             ));
+
+        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
+            $resolver
+                ->shouldReceive('resolve')
+                ->once()
+                ->andReturn($gateway);
+        });
 
         $subscriptionCreationService = $this->mock(
             SubscriptionCreationService::class
@@ -384,6 +414,13 @@ class PaymentProcessingServiceTest extends TestCase
                 successful: true,
                 transactionId: 'subscription-access-transaction-1',
             ));
+
+        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
+            $resolver
+                ->shouldReceive('resolve')
+                ->once()
+                ->andReturn($gateway);
+        });
 
         app(PaymentProcessingService::class)->process($payment);
 
