@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Contracts\PaymentGateway;
 use App\Services\FakePaymentGateway;
 use App\Services\PaymentGatewayResolver;
+use App\Services\ZarinpalPaymentGateway;
 use InvalidArgumentException;
 use Tests\TestCase;
 
@@ -37,6 +38,25 @@ class PaymentGatewayResolverTest extends TestCase
 
         $this->assertInstanceOf(
             FakePaymentGateway::class,
+            $gateway
+        );
+    }
+
+    public function test_it_resolves_zarinpal_gateway_from_configuration(): void
+    {
+        config()->set('payment.gateway', 'zarinpal');
+
+        $resolver = app(PaymentGatewayResolver::class);
+
+        $gateway = $resolver->resolve();
+
+        $this->assertInstanceOf(
+            PaymentGateway::class,
+            $gateway
+        );
+
+        $this->assertInstanceOf(
+            ZarinpalPaymentGateway::class,
             $gateway
         );
     }
