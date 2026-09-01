@@ -13,6 +13,8 @@ class PaymentGatewayResolverTest extends TestCase
 {
     public function test_it_resolves_the_default_payment_gateway(): void
     {
+        config()->set('payment.gateway', 'fake');
+
         $resolver = app(PaymentGatewayResolver::class);
 
         $gateway = $resolver->resolve();
