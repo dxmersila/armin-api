@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\Payments\PaymentGatewayCallback;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
@@ -17,18 +18,20 @@ class PaymentProcessingService
         protected SubscriptionCreationService $subscriptionCreationService,
     ) {}
 
-    public function process(Payment $payment): Payment
-    {
+    public function process(
+        Payment $payment,
+        PaymentGatewayCallback $callback
+    ): Payment {
         if ($payment->status !== PaymentStatus::PENDING) {
             throw new InvalidArgumentException(
                 'Only pending payments can be processed.'
             );
         }
 
-        return DB::transaction(function () use ($payment) {
+        return DB::transaction(function () use ($payment, $callback) {
             $gateway = $this->gatewayResolver->resolve();
 
-            $result = $gateway->pay($payment);
+            $result = $gateway->verify($payment, $callback);
 
             if ($result->successful) {
                 $payment->update([

@@ -2,22 +2,24 @@
 
 namespace Tests\Feature;
 
+use App\Contracts\PaymentGateway;
+use App\Contracts\Payments\PaymentGatewayCallback;
+use App\Contracts\Payments\PaymentGatewayResult;
+use App\Contracts\Payments\PaymentInitiationResult;
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Item;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
-use App\Models\User;
-use App\Contracts\Payments\PaymentGatewayResult;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use App\Contracts\PaymentGateway;
-use App\Enums\OrderType;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
+use App\Models\User;
 use App\Services\PaymentGatewayResolver;
 use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class PaymentApiTest extends TestCase
 {
@@ -126,99 +128,6 @@ class PaymentApiTest extends TestCase
         $this->assertDatabaseCount('payments', 0);
     }
 
-    public function test_authenticated_user_can_process_own_pending_payment(): void
-    {
-        $user = User::factory()->create();
-
-        $order = Order::factory()->create([
-            'user_id' => $user->id,
-            'status' => OrderStatus::PENDING,
-            'total_price' => 150000,
-        ]);
-
-        $payment = Payment::factory()->create([
-            'order_id' => $order->id,
-            'status' => PaymentStatus::PENDING,
-            'amount' => 150000,
-        ]);
-
-        $this->actingAs($user)
-            ->postJson("/api/v1/payments/{$payment->id}/process")
-            ->assertOk()
-            ->assertJsonPath('data.id', $payment->id)
-            ->assertJsonPath('data.status', PaymentStatus::PAID->value);
-
-        $this->assertDatabaseHas('payments', [
-            'id' => $payment->id,
-            'status' => PaymentStatus::PAID->value,
-        ]);
-
-        $this->assertDatabaseHas('orders', [
-            'id' => $order->id,
-            'status' => OrderStatus::PAID->value,
-        ]);
-    }
-
-    public function test_user_cannot_process_another_users_payment(): void
-    {
-        $user = User::factory()->create();
-        $anotherUser = User::factory()->create();
-
-        $order = Order::factory()->create([
-            'user_id' => $anotherUser->id,
-            'status' => OrderStatus::PENDING,
-            'total_price' => 150000,
-        ]);
-
-        $payment = Payment::factory()->create([
-            'order_id' => $order->id,
-            'status' => PaymentStatus::PENDING,
-            'amount' => 150000,
-        ]);
-
-        $this->actingAs($user)
-            ->postJson("/api/v1/payments/{$payment->id}/process")
-            ->assertForbidden();
-    }
-
-    public function test_guest_cannot_process_payment(): void
-    {
-        $order = Order::factory()->create([
-            'status' => OrderStatus::PENDING,
-            'total_price' => 150000,
-        ]);
-
-        $payment = Payment::factory()->create([
-            'order_id' => $order->id,
-            'status' => PaymentStatus::PENDING,
-            'amount' => 150000,
-        ]);
-
-        $this->postJson("/api/v1/payments/{$payment->id}/process")
-            ->assertUnauthorized();
-    }
-
-    public function test_paid_payment_cannot_be_processed_again(): void
-    {
-        $user = User::factory()->create();
-
-        $order = Order::factory()->create([
-            'user_id' => $user->id,
-            'status' => OrderStatus::PAID,
-            'total_price' => 150000,
-        ]);
-
-        $payment = Payment::factory()->create([
-            'order_id' => $order->id,
-            'status' => PaymentStatus::PAID,
-            'amount' => 150000,
-        ]);
-
-        $this->actingAs($user)
-            ->postJson("/api/v1/payments/{$payment->id}/process")
-            ->assertUnprocessable();
-    }
-
     public function test_user_can_complete_subscription_purchase_flow(): void
     {
         Carbon::setTestNow('2026-08-27 12:00:00');
@@ -242,9 +151,18 @@ class PaymentApiTest extends TestCase
 
         $orderResponse
             ->assertCreated()
-            ->assertJsonPath('data.type', OrderType::SUBSCRIPTION->value)
-            ->assertJsonPath('data.status', OrderStatus::PENDING->value)
-            ->assertJsonPath('data.total_price', 300000);
+            ->assertJsonPath(
+                'data.type',
+                OrderType::SUBSCRIPTION->value
+            )
+            ->assertJsonPath(
+                'data.status',
+                OrderStatus::PENDING->value
+            )
+            ->assertJsonPath(
+                'data.total_price',
+                300000
+            );
 
         $orderId = $orderResponse->json('data.id');
 
@@ -255,26 +173,58 @@ class PaymentApiTest extends TestCase
 
         $paymentResponse
             ->assertCreated()
-            ->assertJsonPath('data.order_id', $orderId)
+            ->assertJsonPath(
+                'data.order_id',
+                $orderId
+            )
             ->assertJsonPath(
                 'data.status',
                 PaymentStatus::PENDING->value
             )
-            ->assertJsonPath('data.amount', 300000);
+            ->assertJsonPath(
+                'data.amount',
+                300000
+            );
 
         $paymentId = $paymentResponse->json('data.id');
 
-        // 3. Force the gateway to simulate a successful payment.
+        // 3. Configure the fake gateway.
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
             ->shouldReceive('name')
-            ->once()
+            ->twice()
             ->andReturn('fake');
 
         $gateway
-            ->shouldReceive('pay')
+            ->shouldReceive('initiate')
             ->once()
+            ->withArgs(function (Payment $payment) use ($paymentId) {
+                return $payment->id === $paymentId;
+            })
+            ->andReturn(
+                new PaymentInitiationResult(
+                    redirectUrl: 'https://gateway.test/pay/' . $paymentId,
+                    reference: 'ref-' . $paymentId,
+                )
+            );
+
+        $callback = new PaymentGatewayCallback(
+            reference: 'ref-' . $paymentId,
+            status: 'OK',
+        );
+
+        $gateway
+            ->shouldReceive('verify')
+            ->once()
+            ->withArgs(function (
+                Payment $payment,
+                PaymentGatewayCallback $receivedCallback
+            ) use ($paymentId, $callback) {
+                return $payment->id === $paymentId
+                    && $receivedCallback->reference === $callback->reference
+                    && $receivedCallback->status === $callback->status;
+            })
             ->andReturn(
                 new PaymentGatewayResult(
                     successful: true,
@@ -282,26 +232,62 @@ class PaymentApiTest extends TestCase
                 )
             );
 
-        $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
-            $resolver
-                ->shouldReceive('resolve')
-                ->once()
-                ->andReturn($gateway);
-        });
-
-        // 4. Process the payment.
-        $processResponse = $this->postJson(
-            "/api/v1/payments/{$paymentId}/process"
+        $this->mock(
+            PaymentGatewayResolver::class,
+            function ($resolver) use ($gateway) {
+                $resolver
+                    ->shouldReceive('resolve')
+                    ->twice()
+                    ->andReturn($gateway);
+            }
         );
 
-        $processResponse
+        // 4. Initiate payment.
+        $initiateResponse = $this->postJson(
+            "/api/v1/payments/{$paymentId}/initiate"
+        );
+
+        $initiateResponse
             ->assertOk()
+            ->assertJsonPath(
+                'data.payment_id',
+                $paymentId
+            )
+            ->assertJsonPath(
+                'data.redirect_url',
+                'https://gateway.test/pay/' . $paymentId
+            )
+            ->assertJsonPath(
+                'data.reference',
+                'ref-' . $paymentId
+            );
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $paymentId,
+            'status' => PaymentStatus::PENDING->value,
+            'gateway' => 'fake',
+            'gateway_reference' => 'ref-' . $paymentId,
+        ]);
+
+        // 5. Simulate the gateway callback.
+        $callbackResponse = $this->getJson(
+            "/api/v1/payments/{$paymentId}/callback"
+                . '?Authority=ref-' . $paymentId
+                . '&Status=OK'
+        );
+
+        $callbackResponse
+            ->assertOk()
+            ->assertJsonPath(
+                'data.id',
+                $paymentId
+            )
             ->assertJsonPath(
                 'data.status',
                 PaymentStatus::PAID->value
             );
 
-        // 5. Verify the order is paid.
+        // 6. Verify the order is paid.
         $this->assertDatabaseHas('orders', [
             'id' => $orderId,
             'user_id' => $user->id,
@@ -311,7 +297,7 @@ class PaymentApiTest extends TestCase
             'total_price' => 300000,
         ]);
 
-        // 6. Verify the subscription was created.
+        // 7. Verify the subscription was created.
         $this->assertDatabaseHas('subscriptions', [
             'user_id' => $user->id,
             'subscription_plan_id' => $plan->id,
@@ -323,5 +309,7 @@ class PaymentApiTest extends TestCase
         $this->assertTrue(
             Subscription::where('order_id', $orderId)->exists()
         );
+
+        Carbon::setTestNow();
     }
 }

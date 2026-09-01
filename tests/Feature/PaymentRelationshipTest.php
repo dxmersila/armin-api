@@ -2,10 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Item;
 use App\Models\Order;
 use App\Models\Payment;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -72,6 +70,7 @@ class PaymentRelationshipTest extends TestCase
     {
         $payment = Payment::factory()->create([
             'gateway' => 'zarinpal',
+            'gateway_reference' => 'AUTH-123456',
             'gateway_transaction_id' => 'TX-123456',
             'paid_at' => now(),
         ]);
@@ -81,6 +80,11 @@ class PaymentRelationshipTest extends TestCase
         $this->assertSame(
             'zarinpal',
             $payment->gateway
+        );
+
+        $this->assertSame(
+            'AUTH-123456',
+            $payment->gateway_reference
         );
 
         $this->assertSame(

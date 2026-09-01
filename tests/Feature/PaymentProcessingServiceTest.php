@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Contracts\PaymentGateway;
-use App\Services\PaymentGatewayResolver;
+use App\Contracts\Payments\PaymentGatewayCallback;
 use App\Contracts\Payments\PaymentGatewayResult;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Services\PaymentGatewayResolver;
 use App\Services\PaymentProcessingService;
 use App\Services\SubscriptionCreationService;
 use Carbon\Carbon;
@@ -38,6 +39,11 @@ class PaymentProcessingServiceTest extends TestCase
             'amount' => 150000,
         ]);
 
+        $callback = new PaymentGatewayCallback(
+            reference: 'ref-123',
+            status: 'OK',
+        );
+
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
@@ -46,9 +52,9 @@ class PaymentProcessingServiceTest extends TestCase
             ->andReturn('fake');
 
         $gateway
-            ->shouldReceive('pay')
+            ->shouldReceive('verify')
             ->once()
-            ->with($payment)
+            ->with($payment, $callback)
             ->andReturn(new PaymentGatewayResult(
                 successful: true,
                 transactionId: 'test-transaction-1',
@@ -62,7 +68,7 @@ class PaymentProcessingServiceTest extends TestCase
         });
 
         $result = app(PaymentProcessingService::class)
-            ->process($payment);
+            ->process($payment, $callback);
 
         $this->assertSame(
             PaymentStatus::PAID,
@@ -112,16 +118,22 @@ class PaymentProcessingServiceTest extends TestCase
             'amount' => 150000,
         ]);
 
+        $callback = new PaymentGatewayCallback(
+            reference: 'ref-456',
+            status: 'CANCELLED',
+        );
+
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
             ->shouldReceive('name')
             ->once()
             ->andReturn('fake');
+
         $gateway
-            ->shouldReceive('pay')
+            ->shouldReceive('verify')
             ->once()
-            ->with($payment)
+            ->with($payment, $callback)
             ->andReturn(new PaymentGatewayResult(
                 successful: false,
             ));
@@ -134,7 +146,7 @@ class PaymentProcessingServiceTest extends TestCase
         });
 
         $result = app(PaymentProcessingService::class)
-            ->process($payment);
+            ->process($payment, $callback);
 
         $this->assertSame(
             PaymentStatus::FAILED,
@@ -183,12 +195,18 @@ class PaymentProcessingServiceTest extends TestCase
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
-            ->shouldNotReceive('pay');
+            ->shouldNotReceive('verify');
 
         $this->expectException(InvalidArgumentException::class);
 
         app(PaymentProcessingService::class)
-            ->process($payment);
+            ->process(
+                $payment,
+                new PaymentGatewayCallback(
+                    reference: 'ref-paid',
+                    status: 'OK',
+                )
+            );
     }
 
     public function test_processing_payment_requires_pending_payment(): void
@@ -207,12 +225,18 @@ class PaymentProcessingServiceTest extends TestCase
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
-            ->shouldNotReceive('pay');
+            ->shouldNotReceive('verify');
 
         $this->expectException(InvalidArgumentException::class);
 
         app(PaymentProcessingService::class)
-            ->process($payment);
+            ->process(
+                $payment,
+                new PaymentGatewayCallback(
+                    reference: 'ref-failed',
+                    status: 'FAILED',
+                )
+            );
     }
 
     public function test_successful_subscription_payment_creates_subscription(): void
@@ -239,6 +263,11 @@ class PaymentProcessingServiceTest extends TestCase
             'amount' => 300000,
         ]);
 
+        $callback = new PaymentGatewayCallback(
+            reference: 'subscription-ref-1',
+            status: 'OK',
+        );
+
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
@@ -247,9 +276,9 @@ class PaymentProcessingServiceTest extends TestCase
             ->andReturn('fake');
 
         $gateway
-            ->shouldReceive('pay')
+            ->shouldReceive('verify')
             ->once()
-            ->with($payment)
+            ->with($payment, $callback)
             ->andReturn(new PaymentGatewayResult(
                 successful: true,
                 transactionId: 'subscription-transaction-1',
@@ -263,7 +292,7 @@ class PaymentProcessingServiceTest extends TestCase
         });
 
         $result = app(PaymentProcessingService::class)
-            ->process($payment);
+            ->process($payment, $callback);
 
         $this->assertSame(
             PaymentStatus::PAID,
@@ -308,6 +337,11 @@ class PaymentProcessingServiceTest extends TestCase
             'amount' => 300000,
         ]);
 
+        $callback = new PaymentGatewayCallback(
+            reference: 'rollback-ref-1',
+            status: 'OK',
+        );
+
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
@@ -316,9 +350,9 @@ class PaymentProcessingServiceTest extends TestCase
             ->andReturn('fake');
 
         $gateway
-            ->shouldReceive('pay')
+            ->shouldReceive('verify')
             ->once()
-            ->with($payment)
+            ->with($payment, $callback)
             ->andReturn(new PaymentGatewayResult(
                 successful: true,
                 transactionId: 'rollback-transaction-1',
@@ -342,7 +376,7 @@ class PaymentProcessingServiceTest extends TestCase
 
         try {
             app(PaymentProcessingService::class)
-                ->process($payment);
+                ->process($payment, $callback);
 
             $this->fail('Expected subscription creation to fail.');
         } catch (RuntimeException $exception) {
@@ -400,6 +434,11 @@ class PaymentProcessingServiceTest extends TestCase
             'amount' => 300000,
         ]);
 
+        $callback = new PaymentGatewayCallback(
+            reference: 'subscription-access-ref-1',
+            status: 'OK',
+        );
+
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
@@ -408,8 +447,9 @@ class PaymentProcessingServiceTest extends TestCase
             ->andReturn('fake');
 
         $gateway
-            ->shouldReceive('pay')
+            ->shouldReceive('verify')
             ->once()
+            ->with($payment, $callback)
             ->andReturn(new PaymentGatewayResult(
                 successful: true,
                 transactionId: 'subscription-access-transaction-1',
@@ -422,7 +462,8 @@ class PaymentProcessingServiceTest extends TestCase
                 ->andReturn($gateway);
         });
 
-        app(PaymentProcessingService::class)->process($payment);
+        app(PaymentProcessingService::class)
+            ->process($payment, $callback);
 
         $this->assertDatabaseMissing('accesses', [
             'user_id' => $user->id,

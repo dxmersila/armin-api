@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Contracts\PaymentGateway;
+use App\Contracts\Payments\PaymentGatewayCallback;
 use App\Contracts\Payments\PaymentGatewayResult;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
@@ -57,6 +58,11 @@ class PaymentAccessGrantTest extends TestCase
             'amount' => 300000,
         ]);
 
+        $callback = new PaymentGatewayCallback(
+            reference: 'ref-123',
+            status: 'OK',
+        );
+
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
@@ -65,9 +71,9 @@ class PaymentAccessGrantTest extends TestCase
             ->andReturn('fake');
 
         $gateway
-            ->shouldReceive('pay')
+            ->shouldReceive('verify')
             ->once()
-            ->with($payment)
+            ->with($payment, $callback)
             ->andReturn(
                 new PaymentGatewayResult(
                     successful: true,
@@ -83,7 +89,7 @@ class PaymentAccessGrantTest extends TestCase
         });
 
         app(PaymentProcessingService::class)
-            ->process($payment);
+            ->process($payment, $callback);
 
         $this->assertDatabaseHas('accesses', [
             'user_id' => $user->id,
@@ -122,6 +128,11 @@ class PaymentAccessGrantTest extends TestCase
             'amount' => 100000,
         ]);
 
+        $callback = new PaymentGatewayCallback(
+            reference: 'ref-123',
+            status: 'OK',
+        );
+
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
@@ -130,9 +141,9 @@ class PaymentAccessGrantTest extends TestCase
             ->andReturn('fake');
 
         $gateway
-            ->shouldReceive('pay')
+            ->shouldReceive('verify')
             ->once()
-            ->with($payment)
+            ->with($payment, $callback)
             ->andReturn(
                 new PaymentGatewayResult(
                     successful: false,
@@ -148,7 +159,7 @@ class PaymentAccessGrantTest extends TestCase
         });
 
         app(PaymentProcessingService::class)
-            ->process($payment);
+            ->process($payment, $callback);
 
         $this->assertDatabaseMissing('accesses', [
             'user_id' => $user->id,

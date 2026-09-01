@@ -35,6 +35,13 @@ Route::prefix('v1')->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{category:slug}', [CategoryController::class, 'show']);
 
+    // Payment Callback
+    Route::get(
+        '/payments/{payment}/callback',
+        [PaymentController::class, 'callback']
+    );
+
+
     /*
     |--------------------------------------------------------------------------
     | Authenticated Routes
@@ -70,8 +77,8 @@ Route::prefix('v1')->group(function () {
         );
 
         Route::post(
-            '/payments/{payment}/process',
-            [PaymentController::class, 'process']
+            '/payments/{payment}/initiate',
+            [PaymentController::class, 'initiate']
         );
 
         // Subscriptions

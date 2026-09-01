@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Payment;
 use App\Services\FakePaymentGateway;
+use App\Contracts\Payments\PaymentGatewayCallback;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,19 +22,46 @@ class FakePaymentGatewayTest extends TestCase
         );
     }
 
-    public function test_fake_gateway_successfully_pays_payment(): void
+    public function test_fake_gateway_successfully_verifies_payment(): void
     {
         $payment = Payment::factory()->create([
             'amount' => 150000,
         ]);
 
-        $result = app(FakePaymentGateway::class)->pay($payment);
+        $callback = new PaymentGatewayCallback(
+            reference: 'fake-reference-' . $payment->id,
+            status: 'OK',
+        );
+
+        $result = app(FakePaymentGateway::class)->verify(
+            $payment,
+            $callback
+        );
 
         $this->assertTrue($result->successful);
 
         $this->assertSame(
             'fake-' . $payment->id,
             $result->transactionId
+        );
+    }
+
+    public function test_fake_gateway_can_initiate_payment(): void
+    {
+        $payment = Payment::factory()->create([
+            'amount' => 150000,
+        ]);
+
+        $result = app(FakePaymentGateway::class)->initiate($payment);
+
+        $this->assertSame(
+            'https://gateway.test/pay/' . $payment->id,
+            $result->redirectUrl
+        );
+
+        $this->assertSame(
+            'fake-reference-' . $payment->id,
+            $result->reference
         );
     }
 }

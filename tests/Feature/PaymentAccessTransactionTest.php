@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Contracts\PaymentGateway;
+use App\Contracts\Payments\PaymentGatewayCallback;
+use App\Contracts\Payments\PaymentGatewayResult;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Item;
@@ -11,9 +13,8 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\AccessGrantService;
-use App\Services\PaymentProcessingService;
-use App\Contracts\Payments\PaymentGatewayResult;
 use App\Services\PaymentGatewayResolver;
+use App\Services\PaymentProcessingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -62,6 +63,11 @@ class PaymentAccessTransactionTest extends TestCase
             'amount' => 300000,
         ]);
 
+        $callback = new PaymentGatewayCallback(
+            reference: 'ref-123',
+            status: 'OK',
+        );
+
         $gateway = $this->mock(PaymentGateway::class);
 
         $gateway
@@ -70,9 +76,9 @@ class PaymentAccessTransactionTest extends TestCase
             ->andReturn('fake');
 
         $gateway
-            ->shouldReceive('pay')
+            ->shouldReceive('verify')
             ->once()
-            ->with($payment)
+            ->with($payment, $callback)
             ->andReturn(
                 new PaymentGatewayResult(
                     successful: true,
@@ -101,7 +107,7 @@ class PaymentAccessTransactionTest extends TestCase
 
         try {
             app(PaymentProcessingService::class)
-                ->process($payment);
+                ->process($payment, $callback);
 
             $this->fail('Expected PaymentProcessingService to throw.');
         } catch (RuntimeException $exception) {
