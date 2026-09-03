@@ -28,39 +28,52 @@ class PaymentProcessingService
             );
         }
 
-        return DB::transaction(function () use ($payment, $callback) {
-            $gateway = $this->gatewayResolver->resolve();
+        if (
+            $payment->gateway_reference === null
+            || $payment->gateway_reference !== $callback->reference
+        ) {
+            throw new InvalidArgumentException(
+                'Payment gateway reference does not match the callback reference.'
+            );
+        }
 
-            $result = $gateway->verify($payment, $callback);
+        $gateway = $this->gatewayResolver->resolveByName(
+            $payment->gateway
+        );
 
-            if ($result->successful) {
-                $payment->update([
-                    'status' => PaymentStatus::PAID,
-                    'gateway' => $gateway->name(),
-                    'gateway_transaction_id' => $result->transactionId,
-                    'paid_at' => now(),
-                ]);
+        $result = $gateway->verify($payment, $callback);
 
-                $order = $payment->order;
+        if (! $result->successful) {
+            $payment->update([
+                'status' => PaymentStatus::FAILED,
+                'gateway' => $gateway->name(),
+            ]);
 
-                $order->update([
-                    'status' => OrderStatus::PAID,
-                ]);
+            return $payment->fresh();
+        }
 
-                if ($order->type === OrderType::SUBSCRIPTION) {
-                    $this->subscriptionCreationService->create(
-                        $order->user,
-                        $order->subscriptionPlan,
-                        $order,
-                    );
-                } else {
-                    $this->accessGrantService->grantForOrder($order);
-                }
+        return DB::transaction(function () use ($payment, $gateway, $result) {
+            $payment->update([
+                'status' => PaymentStatus::PAID,
+                'gateway' => $gateway->name(),
+                'gateway_transaction_id' => $result->transactionId,
+                'paid_at' => now(),
+            ]);
+
+            $order = $payment->order;
+
+            $order->update([
+                'status' => OrderStatus::PAID,
+            ]);
+
+            if ($order->type === OrderType::SUBSCRIPTION) {
+                $this->subscriptionCreationService->create(
+                    $order->user,
+                    $order->subscriptionPlan,
+                    $order,
+                );
             } else {
-                $payment->update([
-                    'status' => PaymentStatus::FAILED,
-                    'gateway' => $gateway->name(),
-                ]);
+                $this->accessGrantService->grantForOrder($order);
             }
 
             return $payment->fresh();

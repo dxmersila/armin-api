@@ -61,6 +61,8 @@ class PaymentAccessTransactionTest extends TestCase
             'order_id' => $order->id,
             'status' => PaymentStatus::PENDING,
             'amount' => 300000,
+            'gateway' => 'fake',
+            'gateway_reference' => 'ref-123',
         ]);
 
         $callback = new PaymentGatewayCallback(
@@ -88,8 +90,9 @@ class PaymentAccessTransactionTest extends TestCase
 
         $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
             $resolver
-                ->shouldReceive('resolve')
+                ->shouldReceive('resolveByName')
                 ->once()
+                ->with('fake')
                 ->andReturn($gateway);
         });
 

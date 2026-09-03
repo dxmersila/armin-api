@@ -172,4 +172,65 @@ class ItemAccessTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_authenticated_user_cannot_access_paid_item_content_without_access(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+            'content' => 'SECRET CONTENT',
+        ]);
+
+        $response = $this
+            ->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/items/{$item->slug}/content");
+
+        $response->assertForbidden();
+    }
+
+    public function test_authenticated_user_can_access_paid_item_content_with_individual_access(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+            'content' => 'SECRET CONTENT',
+        ]);
+
+        Access::create([
+            'user_id' => $user->id,
+            'item_id' => $item->id,
+        ]);
+
+        $response = $this
+            ->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/items/{$item->slug}/content");
+
+        $response
+            ->assertOk()
+            ->assertJson([
+                'content' => 'SECRET CONTENT',
+            ]);
+    }
+
+    public function test_authenticated_user_can_access_free_item_content(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'free',
+            'content' => 'FREE CONTENT',
+        ]);
+
+        $response = $this
+            ->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/items/{$item->slug}/content");
+
+        $response
+            ->assertOk()
+            ->assertJson([
+                'content' => 'FREE CONTENT',
+            ]);
+    }
 }

@@ -17,7 +17,9 @@ class SubscriptionPlanController extends Controller
      */
     public function index(): AnonymousResourceCollection
     {
-        $plans = SubscriptionPlan::latest()
+        $plans = SubscriptionPlan::query()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate(15);
 
         return SubscriptionPlanResource::collection($plans);

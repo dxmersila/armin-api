@@ -63,6 +63,42 @@ class PaymentGatewayResolverTest extends TestCase
         );
     }
 
+    public function test_it_resolves_gateway_by_name(): void
+    {
+        $resolver = app(PaymentGatewayResolver::class);
+
+        $gateway = $resolver->resolveByName('fake');
+
+        $this->assertInstanceOf(
+            FakePaymentGateway::class,
+            $gateway
+        );
+    }
+
+    public function test_it_resolves_zarinpal_gateway_by_name(): void
+    {
+        $resolver = app(PaymentGatewayResolver::class);
+
+        $gateway = $resolver->resolveByName('zarinpal');
+
+        $this->assertInstanceOf(
+            ZarinpalPaymentGateway::class,
+            $gateway
+        );
+    }
+
+    public function test_it_rejects_unknown_gateway_name(): void
+    {
+        $resolver = app(PaymentGatewayResolver::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Payment gateway [unknown] is not configured.'
+        );
+
+        $resolver->resolveByName('unknown');
+    }
+
     public function test_it_rejects_unknown_payment_gateway(): void
     {
         config()->set('payment.gateway', 'unknown');

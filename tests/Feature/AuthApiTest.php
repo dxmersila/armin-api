@@ -123,4 +123,24 @@ class AuthApiTest extends TestCase
                 'message' => 'Logged out successfully',
             ]);
     }
+
+    public function test_login_is_rate_limited(): void
+    {
+        User::factory()->create([
+            'email' => 'test@example.com',
+            'password' => 'password123',
+        ]);
+
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => 'test@example.com',
+                'password' => 'wrong-password',
+            ])->assertStatus(401);
+        }
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'test@example.com',
+            'password' => 'wrong-password',
+        ])->assertStatus(429);
+    }
 }

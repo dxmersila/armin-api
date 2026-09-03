@@ -15,6 +15,7 @@ class CategoryController extends Controller
     {
         $categories = Category::query()
             ->orderBy('name')
+            ->orderBy('id')
             ->paginate(12);
 
         return CategoryResource::collection($categories);
@@ -24,6 +25,8 @@ class CategoryController extends Controller
     {
         $items = $category->items()
             ->where('is_visible', true)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->with([
                 'categories',
                 'tags',

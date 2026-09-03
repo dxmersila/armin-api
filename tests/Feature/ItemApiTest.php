@@ -80,4 +80,88 @@ class ItemApiTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('data.0.title', 'New Item');
     }
+
+    public function test_items_endpoint_does_not_expose_item_content(): void
+    {
+        Item::factory()->create([
+            'title' => 'Public Item',
+            'is_visible' => true,
+            'content' => 'SECRET PROTECTED CONTENT',
+        ]);
+
+        $response = $this->getJson('/api/v1/items');
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment([
+                'title' => 'Public Item',
+            ])
+            ->assertJsonMissing([
+                'content' => 'SECRET PROTECTED CONTENT',
+            ]);
+    }
+
+    public function test_items_latest_sort_is_deterministic_when_created_at_matches(): void
+    {
+        $createdAt = now();
+
+        $firstItem = Item::factory()->create([
+            'created_at' => $createdAt,
+            'is_visible' => true,
+        ]);
+
+        $secondItem = Item::factory()->create([
+            'created_at' => $createdAt,
+            'is_visible' => true,
+        ]);
+
+        $response = $this->getJson('/api/v1/items?sort=latest');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $secondItem->id)
+            ->assertJsonPath('data.1.id', $firstItem->id);
+    }
+
+    public function test_items_oldest_sort_is_deterministic_when_created_at_matches(): void
+    {
+        $createdAt = now();
+
+        $firstItem = Item::factory()->create([
+            'created_at' => $createdAt,
+            'is_visible' => true,
+        ]);
+
+        $secondItem = Item::factory()->create([
+            'created_at' => $createdAt,
+            'is_visible' => true,
+        ]);
+
+        $response = $this->getJson('/api/v1/items?sort=oldest');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $firstItem->id)
+            ->assertJsonPath('data.1.id', $secondItem->id);
+    }
+
+    public function test_items_title_sort_is_deterministic_when_titles_match(): void
+    {
+        $firstItem = Item::factory()->create([
+            'title' => 'Same Title',
+            'is_visible' => true,
+        ]);
+
+        $secondItem = Item::factory()->create([
+            'title' => 'Same Title',
+            'is_visible' => true,
+        ]);
+
+        $response = $this->getJson('/api/v1/items?sort=title');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $firstItem->id)
+            ->assertJsonPath('data.1.id', $secondItem->id);
+    }
 }

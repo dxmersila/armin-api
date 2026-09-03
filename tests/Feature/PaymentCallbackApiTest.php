@@ -61,8 +61,9 @@ class PaymentCallbackApiTest extends TestCase
 
         $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
             $resolver
-                ->shouldReceive('resolve')
+                ->shouldReceive('resolveByName')
                 ->once()
+                ->with('fake')
                 ->andReturn($gateway);
         });
 
@@ -92,6 +93,44 @@ class PaymentCallbackApiTest extends TestCase
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
             'status' => OrderStatus::PAID->value,
+        ]);
+    }
+
+    public function test_payment_callback_rejects_mismatched_gateway_reference(): void
+    {
+        $order = Order::factory()->create([
+            'status' => OrderStatus::PENDING,
+            'total_price' => 150000,
+        ]);
+
+        $payment = Payment::factory()->create([
+            'order_id' => $order->id,
+            'status' => PaymentStatus::PENDING,
+            'amount' => 150000,
+            'gateway' => 'fake',
+            'gateway_reference' => 'expected-ref',
+        ]);
+
+        $response = $this->getJson(
+            "/api/v1/payments/{$payment->id}/callback"
+                . '?Authority=different-ref&Status=OK'
+        );
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath(
+                'message',
+                'Payment gateway reference does not match the callback reference.'
+            );
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id,
+            'status' => PaymentStatus::PENDING->value,
+        ]);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => OrderStatus::PENDING->value,
         ]);
     }
 }

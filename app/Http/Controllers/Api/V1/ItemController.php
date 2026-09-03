@@ -46,9 +46,18 @@ class ItemController extends Controller
 
         if ($request->filled('sort')) {
             match ($request->sort) {
-                'latest' => $query->latest(),
-                'oldest' => $query->oldest(),
-                'title' => $query->orderBy('title'),
+                'latest' => $query
+                    ->orderByDesc('created_at')
+                    ->orderByDesc('id'),
+
+                'oldest' => $query
+                    ->orderBy('created_at')
+                    ->orderBy('id'),
+
+                'title' => $query
+                    ->orderBy('title')
+                    ->orderBy('id'),
+
                 default => null,
             };
         }

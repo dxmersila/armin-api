@@ -9,8 +9,13 @@ class PaymentGatewayResolver
 {
     public function resolve(): PaymentGateway
     {
-        $name = config('payment.gateway');
+        return $this->resolveByName(
+            config('payment.gateway')
+        );
+    }
 
+    public function resolveByName(string $name): PaymentGateway
+    {
         $gatewayClass = config("payment.gateways.{$name}");
 
         if ($gatewayClass === null) {

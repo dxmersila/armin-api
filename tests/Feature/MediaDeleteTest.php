@@ -172,4 +172,69 @@ class MediaDeleteTest extends TestCase
 
         $disk->assertExists('media/test.jpg');
     }
+
+    public function test_shared_file_is_not_deleted_when_one_media_is_removed(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $itemOne = Item::factory()->create();
+        $itemTwo = Item::factory()->create();
+
+        $file = File::create([
+            'name' => 'shared.jpg',
+            'path' => 'media/shared.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 1000,
+        ]);
+
+        Storage::disk('public')->put(
+            'media/shared.jpg',
+            'dummy content'
+        );
+
+        $mediaOne = Media::create([
+            'item_id' => $itemOne->id,
+            'file_id' => $file->id,
+            'is_primary' => true,
+            'sort_order' => 0,
+        ]);
+
+        $mediaTwo = Media::create([
+            'item_id' => $itemTwo->id,
+            'file_id' => $file->id,
+            'is_primary' => true,
+            'sort_order' => 0,
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->deleteJson(
+                "/api/v1/admin/items/{$itemOne->id}/media/{$mediaOne->id}"
+            );
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseMissing('media', [
+            'id' => $mediaOne->id,
+        ]);
+
+        $this->assertDatabaseHas('media', [
+            'id' => $mediaTwo->id,
+            'item_id' => $itemTwo->id,
+            'file_id' => $file->id,
+        ]);
+
+        $this->assertDatabaseHas('files', [
+            'id' => $file->id,
+        ]);
+
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+
+        $disk->assertExists('media/shared.jpg');
+    }
 }

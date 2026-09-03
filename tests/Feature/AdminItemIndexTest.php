@@ -106,4 +106,30 @@ class AdminItemIndexTest extends TestCase
 
         $this->assertCount(15, $response->json('data'));
     }
+
+    public function test_admin_items_are_deterministically_ordered_by_id_when_created_at_matches(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $createdAt = now();
+
+        $firstItem = Item::factory()->create([
+            'created_at' => $createdAt,
+        ]);
+
+        $secondItem = Item::factory()->create([
+            'created_at' => $createdAt,
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/admin/items');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $secondItem->id)
+            ->assertJsonPath('data.1.id', $firstItem->id);
+    }
 }

@@ -110,4 +110,53 @@ class CategoryApiTest extends TestCase
 
         $response->assertStatus(404);
     }
+
+    public function test_categories_are_deterministically_ordered_by_id_when_names_match(): void
+    {
+        $firstCategory = Category::factory()->create([
+            'name' => 'Same Name',
+        ]);
+
+        $secondCategory = Category::factory()->create([
+            'name' => 'Same Name',
+        ]);
+
+        $response = $this->getJson('/api/v1/categories');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $firstCategory->id)
+            ->assertJsonPath('data.1.id', $secondCategory->id);
+    }
+
+    public function test_category_items_are_deterministically_ordered_by_created_at_and_id(): void
+    {
+        $category = Category::factory()->create([
+            'slug' => 'design',
+        ]);
+
+        $createdAt = now();
+
+        $firstItem = Item::factory()->create([
+            'created_at' => $createdAt,
+            'is_visible' => true,
+        ]);
+
+        $secondItem = Item::factory()->create([
+            'created_at' => $createdAt,
+            'is_visible' => true,
+        ]);
+
+        $category->items()->attach([
+            $firstItem->id,
+            $secondItem->id,
+        ]);
+
+        $response = $this->getJson('/api/v1/categories/design');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $secondItem->id)
+            ->assertJsonPath('data.1.id', $firstItem->id);
+    }
 }

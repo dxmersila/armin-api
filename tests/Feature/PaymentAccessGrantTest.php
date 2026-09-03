@@ -7,7 +7,6 @@ use App\Contracts\Payments\PaymentGatewayCallback;
 use App\Contracts\Payments\PaymentGatewayResult;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
-use App\Models\Access;
 use App\Models\Item;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -56,6 +55,8 @@ class PaymentAccessGrantTest extends TestCase
             'order_id' => $order->id,
             'status' => PaymentStatus::PENDING,
             'amount' => 300000,
+            'gateway' => 'fake',
+            'gateway_reference' => 'ref-123',
         ]);
 
         $callback = new PaymentGatewayCallback(
@@ -83,8 +84,9 @@ class PaymentAccessGrantTest extends TestCase
 
         $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
             $resolver
-                ->shouldReceive('resolve')
+                ->shouldReceive('resolveByName')
                 ->once()
+                ->with('fake')
                 ->andReturn($gateway);
         });
 
@@ -126,6 +128,8 @@ class PaymentAccessGrantTest extends TestCase
             'order_id' => $order->id,
             'status' => PaymentStatus::PENDING,
             'amount' => 100000,
+            'gateway' => 'fake',
+            'gateway_reference' => 'ref-123',
         ]);
 
         $callback = new PaymentGatewayCallback(
@@ -153,8 +157,9 @@ class PaymentAccessGrantTest extends TestCase
 
         $this->mock(PaymentGatewayResolver::class, function ($resolver) use ($gateway) {
             $resolver
-                ->shouldReceive('resolve')
+                ->shouldReceive('resolveByName')
                 ->once()
+                ->with('fake')
                 ->andReturn($gateway);
         });
 

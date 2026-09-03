@@ -9,6 +9,7 @@ use App\Models\File;
 use App\Models\Item;
 use App\Models\Media;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -62,12 +63,26 @@ class MediaController extends Controller
         abort_unless($media->item_id === $item->id, 404);
 
         $file = $media->file;
+        $fileId = $file->id;
+        $filePath = $file->path;
 
-        Storage::disk('public')->delete($file->path);
+        DB::transaction(function () use ($media, $fileId) {
+            $media->delete();
 
-        $media->delete();
+            $fileStillInUse = Media::query()
+                ->where('file_id', $fileId)
+                ->exists();
 
-        $file->delete();
+            if (! $fileStillInUse) {
+                File::query()
+                    ->whereKey($fileId)
+                    ->delete();
+            }
+        });
+
+        if (! Media::query()->where('file_id', $fileId)->exists()) {
+            Storage::disk('public')->delete($filePath);
+        }
 
         return response()->json([
             'message' => 'Media deleted successfully',

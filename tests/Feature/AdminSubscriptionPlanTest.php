@@ -129,4 +129,30 @@ class AdminSubscriptionPlanTest extends TestCase
             'is_active' => false,
         ]);
     }
+
+    public function test_admin_subscription_plans_are_deterministically_ordered_by_id_when_created_at_matches(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $createdAt = now();
+
+        $firstPlan = SubscriptionPlan::factory()->create([
+            'created_at' => $createdAt,
+        ]);
+
+        $secondPlan = SubscriptionPlan::factory()->create([
+            'created_at' => $createdAt,
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->getJson('/api/v1/admin/subscription-plans');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $secondPlan->id)
+            ->assertJsonPath('data.1.id', $firstPlan->id);
+    }
 }

@@ -237,7 +237,13 @@ class PaymentApiTest extends TestCase
             function ($resolver) use ($gateway) {
                 $resolver
                     ->shouldReceive('resolve')
-                    ->twice()
+                    ->once()
+                    ->andReturn($gateway);
+
+                $resolver
+                    ->shouldReceive('resolveByName')
+                    ->once()
+                    ->with('fake')
                     ->andReturn($gateway);
             }
         );

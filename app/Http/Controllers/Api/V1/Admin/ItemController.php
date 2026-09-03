@@ -30,7 +30,8 @@ class ItemController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $items = Item::with(self::RELATIONS)
-            ->latest()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate(15);
 
         return AdminItemResource::collection($items);

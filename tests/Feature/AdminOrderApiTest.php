@@ -452,4 +452,58 @@ class AdminOrderApiTest extends TestCase
                 500000
             );
     }
+
+    public function test_admin_order_list_is_deterministically_ordered_by_id_when_created_at_matches(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $createdAt = now();
+
+        $firstOrder = Order::factory()->create([
+            'created_at' => $createdAt,
+        ]);
+
+        $secondOrder = Order::factory()->create([
+            'created_at' => $createdAt,
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->getJson('/api/v1/admin/orders');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $secondOrder->id)
+            ->assertJsonPath('data.1.id', $firstOrder->id);
+    }
+
+    public function test_admin_payment_status_filter_matches_any_payment_on_order(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $order = Order::factory()->create();
+
+        Payment::factory()->create([
+            'order_id' => $order->id,
+            'status' => PaymentStatus::FAILED,
+        ]);
+
+        Payment::factory()->create([
+            'order_id' => $order->id,
+            'status' => PaymentStatus::PAID,
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->getJson('/api/v1/admin/orders?payment_status=paid');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $order->id);
+    }
 }
