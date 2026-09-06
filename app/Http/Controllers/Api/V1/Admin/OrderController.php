@@ -41,7 +41,7 @@ class OrderController extends Controller
         $orders = $query
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->paginate();
+            ->paginate(15);
 
         return AdminOrderResource::collection($orders);
     }
