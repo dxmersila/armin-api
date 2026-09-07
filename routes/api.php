@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\V1\Admin\SubscriptionPlanController;
+use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ItemController;
@@ -143,6 +144,22 @@ Route::prefix('v1')->group(function () {
             Route::get(
                 '/orders/{order}',
                 [AdminOrderController::class, 'show']
+            );
+
+            // Users
+            Route::get(
+                '/users',
+                [AdminUserController::class, 'index']
+            );
+
+            Route::get(
+                '/users/{user}',
+                [AdminUserController::class, 'show']
+            );
+
+            Route::patch(
+                '/users/{user}',
+                [AdminUserController::class, 'update']
             );
 
             // Subscription Plans
