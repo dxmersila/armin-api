@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AdminItemIndexRequest;
 use App\Http\Requests\StoreItemRequest;
 use App\Http\Requests\UpdateItemRequest;
 use App\Http\Resources\AdminItemResource;
@@ -28,12 +29,56 @@ class ItemController extends Controller
     /**
      * Display a listing of all items for admin.
      */
-    public function index(): AnonymousResourceCollection
-    {
-        $items = Item::with(self::RELATIONS)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->paginate(15);
+    public function index(
+        AdminItemIndexRequest $request
+    ): AnonymousResourceCollection {
+        $query = Item::with(self::RELATIONS);
+
+        if ($request->filled('search')) {
+            $search = $request->string('search')->value();
+
+            $query->where(function ($query) use ($search) {
+                $query
+                    ->where('title', 'like', '%' . $search . '%')
+                    ->orWhere('slug', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($request->has('is_visible')) {
+            $query->where(
+                'is_visible',
+                $request->boolean('is_visible')
+            );
+        }
+
+        if ($request->filled('access_type')) {
+            $query->where(
+                'access_type',
+                $request->string('access_type')->value()
+            );
+        }
+
+        if ($request->filled('category_id')) {
+            $query->whereHas('categories', function ($query) use ($request) {
+                $query->whereKey($request->integer('category_id'));
+            });
+        }
+
+        match ($request->string('sort')->value()) {
+            'oldest' => $query
+                ->orderBy('created_at')
+                ->orderBy('id'),
+
+            'title' => $query
+                ->orderBy('title')
+                ->orderBy('id'),
+
+            default => $query
+                ->orderByDesc('created_at')
+                ->orderByDesc('id'),
+        };
+
+        $items = $query->paginate(15);
 
         return AdminItemResource::collection($items);
     }

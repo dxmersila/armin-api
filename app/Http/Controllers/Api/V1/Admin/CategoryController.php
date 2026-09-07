@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AdminCategoryIndexRequest;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Http\Resources\AdminCategoryResource;
@@ -14,12 +15,36 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CategoryController extends Controller
 {
-    public function index(): AnonymousResourceCollection
-    {
-        $categories = Category::query()
-            ->orderBy('name')
-            ->orderBy('id')
-            ->paginate(15);
+    public function index(
+        AdminCategoryIndexRequest $request
+    ): AnonymousResourceCollection {
+        $query = Category::query();
+
+        if ($request->filled('search')) {
+            $search = $request->string('search')->value();
+
+            $query->where(function ($query) use ($search) {
+                $query
+                    ->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('slug', 'like', '%' . $search . '%');
+            });
+        }
+
+        match ($request->string('sort')->value()) {
+            'latest' => $query
+                ->orderByDesc('created_at')
+                ->orderByDesc('id'),
+
+            'oldest' => $query
+                ->orderBy('created_at')
+                ->orderBy('id'),
+
+            default => $query
+                ->orderBy('name')
+                ->orderBy('id'),
+        };
+
+        $categories = $query->paginate(15);
 
         return AdminCategoryResource::collection($categories);
     }

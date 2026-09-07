@@ -67,6 +67,135 @@ class AdminCategoryIndexTest extends TestCase
             ->assertJsonPath('meta.total', 3);
     }
 
+    public function test_admin_can_search_categories_by_name_or_slug(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $nameMatch = Category::factory()->create([
+            'name' => 'Laravel Development',
+            'slug' => 'laravel-development',
+        ]);
+
+        $slugMatch = Category::factory()->create([
+            'name' => 'React Development',
+            'slug' => 'laravel-react-development',
+        ]);
+
+        Category::factory()->create([
+            'name' => 'Unrelated Category',
+            'slug' => 'unrelated-category',
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/admin/categories?search=laravel');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonFragment([
+                'id' => $nameMatch->id,
+                'name' => 'Laravel Development',
+            ])
+            ->assertJsonFragment([
+                'id' => $slugMatch->id,
+                'name' => 'React Development',
+            ]);
+    }
+
+    public function test_admin_can_sort_categories_by_latest(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $oldest = Category::factory()->create([
+            'created_at' => now()->subDays(2),
+        ]);
+
+        $newest = Category::factory()->create([
+            'created_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/admin/categories?sort=latest');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $newest->id)
+            ->assertJsonPath('data.1.id', $oldest->id);
+    }
+
+    public function test_admin_can_sort_categories_by_oldest(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $oldest = Category::factory()->create([
+            'created_at' => now()->subDays(2),
+        ]);
+
+        $newest = Category::factory()->create([
+            'created_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/admin/categories?sort=oldest');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $oldest->id)
+            ->assertJsonPath('data.1.id', $newest->id);
+    }
+
+    public function test_admin_can_sort_categories_by_name(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $zulu = Category::factory()->create([
+            'name' => 'Zulu',
+            'slug' => 'zulu',
+        ]);
+
+        $alpha = Category::factory()->create([
+            'name' => 'Alpha',
+            'slug' => 'alpha',
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/admin/categories?sort=name');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $alpha->id)
+            ->assertJsonPath('data.1.id', $zulu->id);
+    }
+
+    public function test_admin_category_index_rejects_invalid_filter_values(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->getJson(
+                '/api/v1/admin/categories'
+                . '?search=' . str_repeat('a', 101)
+                . '&sort=invalid'
+            );
+
+        $response->assertStatus(422);
+    }
+
     public function test_admin_categories_are_paginated_by_fifteen(): void
     {
         $admin = User::factory()->create([
