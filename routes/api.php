@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
@@ -109,6 +110,12 @@ Route::prefix('v1')->group(function () {
             Route::apiResource(
                 'items',
                 AdminItemController::class
+            );
+
+            // Categories
+            Route::apiResource(
+                'categories',
+                AdminCategoryController::class
             );
 
             // Item Media
