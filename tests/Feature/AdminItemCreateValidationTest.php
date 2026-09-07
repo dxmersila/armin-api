@@ -105,13 +105,13 @@ class AdminItemCreateValidationTest extends TestCase
             ->assertJsonValidationErrors(['tags']);
     }
 
-    public function test_tag_ids_must_exist(): void
+    public function test_tags_must_be_strings(): void
     {
         $response = $this
             ->actingAs($this->admin(), 'sanctum')
             ->postJson('/api/v1/admin/items', [
                 'title' => 'Test Item',
-                'tags' => [999999],
+                'tags' => [123],
             ]);
 
         $response
@@ -136,16 +136,23 @@ class AdminItemCreateValidationTest extends TestCase
     public function test_valid_categories_and_tags_are_accepted(): void
     {
         $category = Category::factory()->create();
-        $tag = Tag::factory()->create();
 
         $response = $this
             ->actingAs($this->admin(), 'sanctum')
             ->postJson('/api/v1/admin/items', [
                 'title' => 'Test Item',
                 'categories' => [$category->id],
-                'tags' => [$tag->id],
+                'tags' => ['Laravel', 'API'],
             ]);
 
         $response->assertStatus(201);
+
+        $this->assertDatabaseHas('tags', [
+            'name' => 'Laravel',
+        ]);
+
+        $this->assertDatabaseHas('tags', [
+            'name' => 'API',
+        ]);
     }
 }

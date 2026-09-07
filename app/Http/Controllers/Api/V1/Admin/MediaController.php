@@ -58,6 +58,29 @@ class MediaController extends Controller
             ->setStatusCode(201);
     }
 
+    public function setPrimary(Item $item, Media $media): JsonResponse
+    {
+        abort_unless($media->item_id === $item->id, 404);
+
+        DB::transaction(function () use ($item, $media) {
+            $item->media()
+                ->where('is_primary', true)
+                ->update([
+                    'is_primary' => false,
+                ]);
+
+            $media->update([
+                'is_primary' => true,
+            ]);
+        });
+
+        $media->load('file');
+
+        return (new MediaResource($media))
+            ->response()
+            ->setStatusCode(200);
+    }
+
     public function destroy(Item $item, Media $media): JsonResponse
     {
         abort_unless($media->item_id === $item->id, 404);

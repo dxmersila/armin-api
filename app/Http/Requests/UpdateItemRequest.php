@@ -83,8 +83,8 @@ class UpdateItemRequest extends FormRequest
             ],
 
             'tags.*' => [
-                'integer',
-                Rule::exists('tags', 'id'),
+                'string',
+                'max:255',
             ],
 
         ];

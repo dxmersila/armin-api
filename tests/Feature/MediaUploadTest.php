@@ -148,6 +148,80 @@ class MediaUploadTest extends TestCase
         );
     }
 
+    public function test_admin_can_set_existing_media_as_primary(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $item = Item::factory()->create();
+
+        $firstFile = UploadedFile::fake()->create(
+            'first.jpg',
+            100,
+            'image/jpeg'
+        );
+
+        $this
+            ->actingAs($admin, 'sanctum')
+            ->post("/api/v1/admin/items/{$item->id}/media", [
+                'file' => $firstFile,
+                'is_primary' => true,
+                'sort_order' => 0,
+            ])
+            ->assertStatus(201);
+
+        $secondFile = UploadedFile::fake()->create(
+            'second.jpg',
+            100,
+            'image/jpeg'
+        );
+
+        $secondResponse = $this
+            ->actingAs($admin, 'sanctum')
+            ->post("/api/v1/admin/items/{$item->id}/media", [
+                'file' => $secondFile,
+                'is_primary' => false,
+                'sort_order' => 1,
+            ])
+            ->assertStatus(201);
+
+        $secondMediaId = $secondResponse->json('data.id');
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->patch(
+                "/api/v1/admin/items/{$item->id}/media/{$secondMediaId}/primary"
+            );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.id', $secondMediaId)
+            ->assertJsonPath('data.is_primary', true);
+
+        $this->assertDatabaseHas('media', [
+            'item_id' => $item->id,
+            'sort_order' => 0,
+            'is_primary' => false,
+        ]);
+
+        $this->assertDatabaseHas('media', [
+            'id' => $secondMediaId,
+            'item_id' => $item->id,
+            'sort_order' => 1,
+            'is_primary' => true,
+        ]);
+
+        $this->assertEquals(
+            1,
+            $item->media()
+                ->where('is_primary', true)
+                ->count()
+        );
+    }
+
     public function test_non_primary_media_does_not_replace_existing_primary_media(): void
     {
         Storage::fake('public');

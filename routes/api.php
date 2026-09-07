@@ -122,6 +122,11 @@ Route::prefix('v1')->group(function () {
                 [MediaController::class, 'destroy']
             );
 
+            Route::patch(
+                '/items/{item}/media/{media}/primary',
+                [MediaController::class, 'setPrimary']
+            );
+
             // Orders
             Route::get(
                 '/orders',

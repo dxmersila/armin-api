@@ -79,8 +79,8 @@ class StoreItemRequest extends FormRequest
             ],
 
             'tags.*' => [
-                'integer',
-                Rule::exists('tags', 'id'),
+                'string',
+                'max:255',
             ],
         ];
     }

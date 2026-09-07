@@ -10,6 +10,7 @@ use App\Models\Media;
 use App\Models\File;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Item;
+use App\Services\TagResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
@@ -40,9 +41,11 @@ class ItemController extends Controller
     /**
      * Store a newly created resource.
      */
-    public function store(StoreItemRequest $request): JsonResponse
-    {
-        $item = DB::transaction(function () use ($request) {
+    public function store(
+        StoreItemRequest $request,
+        TagResolver $tagResolver
+    ): JsonResponse {
+        $item = DB::transaction(function () use ($request, $tagResolver) {
 
             $data = $request->validated();
 
@@ -52,14 +55,16 @@ class ItemController extends Controller
             $data['access_type'] = $data['access_type'] ?? 'free';
 
             $categories = $data['categories'] ?? [];
-            $tags = $data['tags'] ?? [];
+            $tagNames = $data['tags'] ?? [];
 
             unset($data['categories'], $data['tags']);
 
             $item = Item::create($data);
 
             $item->categories()->sync($categories);
-            $item->tags()->sync($tags);
+            $item->tags()->sync(
+                $tagResolver->resolve($tagNames)
+            );
 
             return $item;
         });
@@ -86,14 +91,19 @@ class ItemController extends Controller
      */
     public function update(
         UpdateItemRequest $request,
-        Item $item
+        Item $item,
+        TagResolver $tagResolver
     ): JsonResponse {
-        DB::transaction(function () use ($request, $item) {
+        DB::transaction(function () use (
+            $request,
+            $item,
+            $tagResolver
+        ) {
 
             $data = $request->validated();
 
             $categories = $data['categories'] ?? null;
-            $tags = $data['tags'] ?? null;
+            $tagNames = $data['tags'] ?? null;
 
             unset($data['categories'], $data['tags']);
 
@@ -103,8 +113,10 @@ class ItemController extends Controller
                 $item->categories()->sync($categories);
             }
 
-            if ($tags !== null) {
-                $item->tags()->sync($tags);
+            if ($tagNames !== null) {
+                $item->tags()->sync(
+                    $tagResolver->resolve($tagNames)
+                );
             }
         });
 

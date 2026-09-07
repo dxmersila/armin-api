@@ -115,7 +115,6 @@ class AdminItemUpdateTest extends TestCase
         $item = Item::factory()->create();
 
         $category = Category::factory()->create();
-        $tag = Tag::factory()->create();
 
         $response = $this
             ->actingAs($admin, 'sanctum')
@@ -123,7 +122,7 @@ class AdminItemUpdateTest extends TestCase
                 "/api/v1/admin/items/{$item->id}",
                 [
                     'categories' => [$category->id],
-                    'tags' => [$tag->id],
+                    'tags' => ['Laravel'],
                 ]
             );
 
@@ -133,6 +132,10 @@ class AdminItemUpdateTest extends TestCase
             'item_id' => $item->id,
             'category_id' => $category->id,
         ]);
+
+        $tag = Tag::query()
+            ->where('name', 'Laravel')
+            ->firstOrFail();
 
         $this->assertDatabaseHas('item_tag', [
             'item_id' => $item->id,
@@ -187,9 +190,20 @@ class AdminItemUpdateTest extends TestCase
         $categoryTwo = Category::factory()->create();
         $categoryThree = Category::factory()->create();
 
-        $tagOne = Tag::factory()->create();
-        $tagTwo = Tag::factory()->create();
-        $tagThree = Tag::factory()->create();
+        $tagOne = Tag::factory()->create([
+            'name' => 'Laravel',
+            'slug' => 'laravel',
+        ]);
+
+        $tagTwo = Tag::factory()->create([
+            'name' => 'API',
+            'slug' => 'api',
+        ]);
+
+        $tagThree = Tag::factory()->create([
+            'name' => 'SaaS',
+            'slug' => 'saas',
+        ]);
 
         $item->categories()->sync([
             $categoryOne->id,
@@ -207,7 +221,7 @@ class AdminItemUpdateTest extends TestCase
                 "/api/v1/admin/items/{$item->id}",
                 [
                     'categories' => [$categoryThree->id],
-                    'tags' => [$tagThree->id],
+                    'tags' => ['SaaS'],
                 ]
             );
 

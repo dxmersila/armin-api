@@ -37,6 +37,56 @@ class AdminItemCreateTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_admin_can_reuse_existing_tag_without_creating_duplicate(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $tag = Tag::factory()->create([
+            'name' => 'Laravel',
+            'slug' => 'laravel',
+        ]);
+
+        $firstResponse = $this
+            ->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/admin/items', [
+                'title' => 'First Item',
+                'tags' => ['Laravel'],
+            ]);
+
+        $firstResponse->assertStatus(201);
+
+        $secondResponse = $this
+            ->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/admin/items', [
+                'title' => 'Second Item',
+                'tags' => ['laravel'],
+            ]);
+
+        $secondResponse->assertStatus(201);
+
+        $this->assertDatabaseCount('tags', 1);
+
+        $firstItem = Item::query()
+            ->where('title', 'First Item')
+            ->firstOrFail();
+
+        $secondItem = Item::query()
+            ->where('title', 'Second Item')
+            ->firstOrFail();
+
+        $this->assertDatabaseHas('item_tag', [
+            'item_id' => $firstItem->id,
+            'tag_id' => $tag->id,
+        ]);
+
+        $this->assertDatabaseHas('item_tag', [
+            'item_id' => $secondItem->id,
+            'tag_id' => $tag->id,
+        ]);
+    }
+
     public function test_admin_can_create_item(): void
     {
         $admin = User::factory()->create([
@@ -44,7 +94,10 @@ class AdminItemCreateTest extends TestCase
         ]);
 
         $category = Category::factory()->create();
-        $tag = Tag::factory()->create();
+        $tag = Tag::factory()->create([
+            'name' => 'Laravel',
+            'slug' => 'laravel',
+        ]);
 
         $response = $this
             ->actingAs($admin, 'sanctum')
@@ -54,7 +107,7 @@ class AdminItemCreateTest extends TestCase
                 'content' => 'Test item protected content.',
                 'price' => 250000,
                 'categories' => [$category->id],
-                'tags' => [$tag->id],
+                'tags' => ['laravel'],
             ]);
 
         $response
