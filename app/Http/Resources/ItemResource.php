@@ -21,6 +21,7 @@ class ItemResource extends JsonResource
             'description' => $this->description,
             'is_visible' => $this->is_visible,
             'access_type' => $this->access_type,
+            'price' => $this->price,
 
             'categories' => CategoryResource::collection(
                 $this->whenLoaded('categories')

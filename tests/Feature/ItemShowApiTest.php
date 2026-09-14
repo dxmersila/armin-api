@@ -15,6 +15,8 @@ class ItemShowApiTest extends TestCase
         $item = Item::factory()->create([
             'slug' => 'visible-item',
             'is_visible' => true,
+            'access_type' => 'paid',
+            'price' => 150000,
         ]);
 
         $response = $this->getJson('/api/v1/items/visible-item');
@@ -23,7 +25,9 @@ class ItemShowApiTest extends TestCase
             ->assertStatus(200)
             ->assertJsonFragment([
                 'id' => $item->id,
-            ]);
+            ])
+            ->assertJsonPath('data.access_type', 'paid')
+            ->assertJsonPath('data.price', 150000);
     }
 
     public function test_hidden_item_cannot_be_viewed(): void
