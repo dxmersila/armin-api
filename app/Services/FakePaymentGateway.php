@@ -28,8 +28,10 @@ class FakePaymentGateway implements PaymentGateway
         PaymentGatewayCallback $callback
     ): PaymentGatewayResult {
         return new PaymentGatewayResult(
-            successful: true,
-            transactionId: 'fake-' . $payment->id,
+            successful: $callback->status === 'OK',
+            transactionId: $callback->status === 'OK'
+                ? 'fake-' . $payment->id
+                : null,
         );
     }
 }

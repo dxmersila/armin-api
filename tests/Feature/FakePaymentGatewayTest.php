@@ -46,6 +46,26 @@ class FakePaymentGatewayTest extends TestCase
         );
     }
 
+    public function test_fake_gateway_rejects_failed_payment_callback(): void
+    {
+        $payment = Payment::factory()->create([
+            'amount' => 150000,
+        ]);
+
+        $callback = new PaymentGatewayCallback(
+            reference: 'fake-reference-' . $payment->id,
+            status: 'NOK',
+        );
+
+        $result = app(FakePaymentGateway::class)->verify(
+            $payment,
+            $callback
+        );
+
+        $this->assertFalse($result->successful);
+        $this->assertNull($result->transactionId);
+    }
+
     public function test_fake_gateway_can_initiate_payment(): void
     {
         $payment = Payment::factory()->create([
