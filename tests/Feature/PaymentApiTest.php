@@ -276,22 +276,23 @@ class PaymentApiTest extends TestCase
         ]);
 
         // 5. Simulate the gateway callback.
-        $callbackResponse = $this->getJson(
+        config([
+            'payment.web_app_url' => 'http://web.test',
+        ]);
+
+        $callbackResponse = $this->get(
             "/api/v1/payments/{$paymentId}/callback"
                 . '?Authority=ref-' . $paymentId
                 . '&Status=OK'
         );
 
-        $callbackResponse
-            ->assertOk()
-            ->assertJsonPath(
-                'data.id',
-                $paymentId
-            )
-            ->assertJsonPath(
-                'data.status',
-                PaymentStatus::PAID->value
-            );
+        $callbackResponse->assertRedirect(
+            'http://web.test/payment/result?order_id='
+                . $orderId
+                . '&payment_id='
+                . $paymentId
+                . '&status=paid'
+        );
 
         // 6. Verify the order is paid.
         $this->assertDatabaseHas('orders', [

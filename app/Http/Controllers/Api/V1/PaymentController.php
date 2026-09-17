@@ -53,7 +53,7 @@ class PaymentController extends Controller
     public function callback(
         Payment $payment,
         PaymentProcessingService $service
-    ): PaymentResource {
+    ) {
         $callback = new PaymentGatewayCallback(
             reference: (string) request()->query('Authority', ''),
             status: (string) request()->query('Status', ''),
@@ -62,6 +62,14 @@ class PaymentController extends Controller
 
         $payment = $service->process($payment, $callback);
 
-        return new PaymentResource($payment);
+        $url = rtrim(config('payment.web_app_url'), '/')
+            . '/payment/result?'
+            . http_build_query([
+                'order_id' => $payment->order_id,
+                'payment_id' => $payment->id,
+                'status' => $payment->status->value,
+            ]);
+
+        return redirect()->away($url);
     }
 }

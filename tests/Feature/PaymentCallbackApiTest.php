@@ -67,21 +67,22 @@ class PaymentCallbackApiTest extends TestCase
                 ->andReturn($gateway);
         });
 
-        $response = $this->getJson(
+        config([
+            'payment.web_app_url' => 'http://web.test',
+        ]);
+
+        $response = $this->get(
             "/api/v1/payments/{$payment->id}/callback"
                 . '?Authority=ref-123&Status=OK'
         );
 
-        $response
-            ->assertOk()
-            ->assertJsonPath(
-                'data.id',
-                $payment->id
-            )
-            ->assertJsonPath(
-                'data.status',
-                PaymentStatus::PAID->value
-            );
+        $response->assertRedirect(
+            'http://web.test/payment/result?order_id='
+                . $order->id
+                . '&payment_id='
+                . $payment->id
+                . '&status=paid'
+        );
 
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
