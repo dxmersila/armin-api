@@ -2,13 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Models\Item;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Illuminate\Validation\ValidationException;
-use App\Enums\OrderType;
 
 class OrderCreationService
 {
@@ -30,11 +31,13 @@ class OrderCreationService
         }
 
         return DB::transaction(function () use ($user, $itemIds) {
+            $itemIds = array_values(array_unique($itemIds));
+
             $items = Item::query()
                 ->whereIn('id', $itemIds)
                 ->get();
 
-            if ($items->count() !== count(array_unique($itemIds))) {
+            if ($items->count() !== count($itemIds)) {
                 throw new InvalidArgumentException(
                     'One or more items do not exist.'
                 );
@@ -57,10 +60,34 @@ class OrderCreationService
                 }
             }
 
+            $requestedItemIds = collect($itemIds)
+                ->sort()
+                ->values()
+                ->all();
+
+            $pendingOrders = Order::query()
+                ->where('user_id', $user->id)
+                ->where('type', OrderType::ITEM)
+                ->where('status', OrderStatus::PENDING)
+                ->with('orderItems')
+                ->get();
+
+            foreach ($pendingOrders as $pendingOrder) {
+                $existingItemIds = $pendingOrder->orderItems
+                    ->pluck('item_id')
+                    ->sort()
+                    ->values()
+                    ->all();
+
+                if ($existingItemIds === $requestedItemIds) {
+                    return $pendingOrder->load('orderItems');
+                }
+            }
+
             $order = Order::create([
                 'user_id' => $user->id,
                 'type' => OrderType::ITEM,
-                'status' => 'pending',
+                'status' => OrderStatus::PENDING,
                 'total_price' => 0,
             ]);
 

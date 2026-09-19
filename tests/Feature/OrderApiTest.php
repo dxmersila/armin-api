@@ -184,6 +184,77 @@ class OrderApiTest extends TestCase
         ]);
     }
 
+    public function test_repeated_creation_of_same_pending_item_order_reuses_existing_order(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 100000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $firstResponse = $this->postJson('/api/v1/orders', [
+            'item_ids' => [$item->id],
+        ]);
+
+        $firstResponse->assertCreated();
+
+        $orderId = $firstResponse->json('data.id');
+
+        $secondResponse = $this->postJson('/api/v1/orders', [
+            'item_ids' => [$item->id],
+        ]);
+
+        $secondResponse
+            ->assertOk()
+            ->assertJsonPath('data.id', $orderId)
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.total_price', 100000);
+
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseCount('order_items', 1);
+    }
+
+    public function test_repeated_creation_of_same_pending_multi_item_order_reuses_existing_order(): void
+    {
+        $user = User::factory()->create();
+
+        $firstItem = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 100000,
+        ]);
+
+        $secondItem = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 250000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $firstResponse = $this->postJson('/api/v1/orders', [
+            'item_ids' => [$firstItem->id, $secondItem->id],
+        ]);
+
+        $firstResponse->assertCreated();
+
+        $orderId = $firstResponse->json('data.id');
+
+        $secondResponse = $this->postJson('/api/v1/orders', [
+            'item_ids' => [$secondItem->id, $firstItem->id],
+        ]);
+
+        $secondResponse
+            ->assertOk()
+            ->assertJsonPath('data.id', $orderId)
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.total_price', 350000);
+
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseCount('order_items', 2);
+    }
+
     public function test_order_item_price_is_snapshot_of_item_price(): void
     {
         $user = User::factory()->create();

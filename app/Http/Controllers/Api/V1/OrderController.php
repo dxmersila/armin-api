@@ -79,6 +79,10 @@ class OrderController extends Controller
 
         return (new OrderResource($order))
             ->response()
-            ->setStatusCode(Response::HTTP_CREATED);
+            ->setStatusCode(
+                $order->wasRecentlyCreated
+                    ? Response::HTTP_CREATED
+                    : Response::HTTP_OK
+            );
     }
 }
