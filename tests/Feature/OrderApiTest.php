@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 use App\Models\Payment;
+use App\Models\Media;
 use App\Enums\OrderType;
 use App\Models\SubscriptionPlan;
 use App\Models\Subscription;
@@ -394,6 +395,49 @@ class OrderApiTest extends TestCase
             ->assertJsonPath('data.payments.0.order_id', $order->id)
             ->assertJsonPath('data.payments.0.amount', 150000)
             ->assertJsonPath('data.payments.0.status', 'pending');
+    }
+
+    public function test_order_items_include_item_media_in_order_response(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 150000,
+        ]);
+
+        $media = Media::factory()->create([
+            'item_id' => $item->id,
+            'is_primary' => true,
+            'sort_order' => 0,
+        ]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'status' => 'paid',
+            'total_price' => 150000,
+        ]);
+
+        $order->orderItems()->create([
+            'item_id' => $item->id,
+            'price' => 150000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/orders');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.items.0.item_id', $item->id)
+            ->assertJsonPath(
+                'data.0.items.0.item.media.0.id',
+                $media->id
+            )
+            ->assertJsonPath(
+                'data.0.items.0.item.media.0.is_primary',
+                true
+            );
     }
 
     public function test_authenticated_user_can_view_subscription_plan_in_own_order(): void

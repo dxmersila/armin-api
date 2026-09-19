@@ -21,7 +21,11 @@ class OrderController extends Controller
     {
         $orders = Order::query()
             ->where('user_id', $request->user()->id)
-            ->with('orderItems.item')
+            ->with([
+                'orderItems.item.categories',
+                'orderItems.item.tags',
+                'orderItems.item.media.file',
+            ])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate();
@@ -39,7 +43,9 @@ class OrderController extends Controller
         );
 
         $order->load([
-            'orderItems.item',
+            'orderItems.item.categories',
+            'orderItems.item.tags',
+            'orderItems.item.media.file',
             'subscriptionPlan',
             'payments',
         ]);

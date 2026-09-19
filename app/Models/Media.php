@@ -17,6 +17,14 @@ class Media extends Model
         'sort_order',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'is_primary' => 'boolean',
+            'sort_order' => 'integer',
+        ];
+    }
+
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
