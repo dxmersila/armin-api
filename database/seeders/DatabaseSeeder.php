@@ -6,10 +6,10 @@ use App\Models\Category;
 use App\Models\File;
 use App\Models\Item;
 use App\Models\Media;
-use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -20,33 +20,76 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory(5)->create();
+        User::factory()->create([
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+        ]);
 
-        $categories = Category::factory(5)->create();
-        $tags = Tag::factory(10)->create();
-        $items = Item::factory(20)->create();
+        User::factory()->create([
+            'name' => 'Test User',
+            'email' => 'user@example.com',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+        ]);
 
-        $items->each(function (Item $item) use ($categories, $tags) {
+        $categories = collect([
+            ['name' => 'AI Prompts', 'slug' => 'ai-prompts'],
+            ['name' => 'Design', 'slug' => 'design'],
+            ['name' => 'Development', 'slug' => 'development'],
+        ])->map(fn (array $data) => Category::create($data));
+
+        $items = [
+            [
+                'title' => 'Free AI Starter Prompt',
+                'slug' => 'free-ai-starter-prompt',
+                'description' => 'A free starter prompt for testing the public product flow.',
+                'is_visible' => true,
+                'access_type' => 'free',
+                'price' => 0,
+            ],
+            [
+                'title' => 'Premium Content Pack',
+                'slug' => 'premium-content-pack',
+                'description' => 'A premium digital product for testing checkout and access.',
+                'is_visible' => true,
+                'access_type' => 'paid',
+                'price' => 190000,
+            ],
+            [
+                'title' => 'Advanced Prompt Collection',
+                'slug' => 'advanced-prompt-collection',
+                'description' => 'An advanced paid product for testing the marketplace.',
+                'is_visible' => true,
+                'access_type' => 'paid',
+                'price' => 290000,
+            ],
+            [
+                'title' => 'Hidden Test Product',
+                'slug' => 'hidden-test-product',
+                'description' => 'A hidden product for testing visibility rules.',
+                'is_visible' => false,
+                'access_type' => 'paid',
+                'price' => 99000,
+            ],
+        ];
+
+        foreach ($items as $index => $data) {
+            $item = Item::create($data);
+
             $item->categories()->attach(
-                $categories->random(rand(1, 2))
+                $categories[$index % $categories->count()]->id
             );
 
-            $item->tags()->attach(
-                $tags->random(rand(1, 3))
-            );
+            $file = File::factory()->create();
 
-            $mediaCount = rand(1, 3);
-
-            for ($i = 0; $i < $mediaCount; $i++) {
-                $file = File::factory()->create();
-
-                Media::factory()->create([
-                    'item_id' => $item->id,
-                    'file_id' => $file->id,
-                    'is_primary' => $i === 0,
-                    'sort_order' => $i,
-                ]);
-            }
-        });
+            Media::create([
+                'item_id' => $item->id,
+                'file_id' => $file->id,
+                'is_primary' => true,
+                'sort_order' => 0,
+            ]);
+        }
     }
 }
