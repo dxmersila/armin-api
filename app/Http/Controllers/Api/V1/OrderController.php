@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
+use App\Services\OrderCancellationService;
 use App\Services\OrderCreationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,6 +52,21 @@ class OrderController extends Controller
         ]);
 
         return new OrderResource($order);
+    }
+
+    public function destroy(
+        Order $order,
+        Request $request,
+        OrderCancellationService $orderCancellationService,
+    ): Response {
+        abort_unless(
+            $order->user_id === $request->user()->id,
+            404
+        );
+
+        $orderCancellationService->cancel($order);
+
+        return response()->noContent();
     }
 
     public function store(

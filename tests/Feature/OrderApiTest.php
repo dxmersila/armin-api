@@ -10,6 +10,7 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 use App\Models\Payment;
 use App\Models\Media;
+use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Models\SubscriptionPlan;
 use App\Models\Subscription;
@@ -842,4 +843,126 @@ class OrderApiTest extends TestCase
             1
         );
     }
+
+    public function test_user_can_cancel_their_pending_order(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 100000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $createResponse = $this->postJson('/api/v1/orders', [
+            'item_ids' => [$item->id],
+        ]);
+
+        $createResponse->assertCreated();
+
+        $orderId = $createResponse->json('data.id');
+
+        $response = $this->deleteJson("/api/v1/orders/{$orderId}");
+
+        $response->assertNoContent();
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $orderId,
+            'user_id' => $user->id,
+            'status' => OrderStatus::CANCELLED->value,
+        ]);
+    }
+
+    public function test_user_cannot_cancel_a_paid_order(): void
+    {
+        $user = User::factory()->create();
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'type' => OrderType::ITEM,
+            'status' => OrderStatus::PAID,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->deleteJson("/api/v1/orders/{$order->id}");
+
+        $response->assertStatus(422);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => OrderStatus::PAID->value,
+        ]);
+    }
+
+    public function test_user_cannot_cancel_another_users_order(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $order = Order::factory()->create([
+            'user_id' => $owner->id,
+            'type' => OrderType::ITEM,
+            'status' => OrderStatus::PENDING,
+        ]);
+
+        Sanctum::actingAs($otherUser);
+
+        $response = $this->deleteJson("/api/v1/orders/{$order->id}");
+
+        $response->assertNotFound();
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => OrderStatus::PENDING->value,
+        ]);
+    }
+
+    public function test_cancelled_order_allows_creating_a_new_order_for_the_same_item(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 100000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $firstResponse = $this->postJson('/api/v1/orders', [
+            'item_ids' => [$item->id],
+        ]);
+
+        $firstResponse->assertCreated();
+
+        $firstOrderId = $firstResponse->json('data.id');
+
+        $this->deleteJson("/api/v1/orders/{$firstOrderId}")
+            ->assertNoContent();
+
+        $secondResponse = $this->postJson('/api/v1/orders', [
+            'item_ids' => [$item->id],
+        ]);
+
+        $secondResponse
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.total_price', 100000);
+
+        $secondOrderId = $secondResponse->json('data.id');
+
+        $this->assertNotSame($firstOrderId, $secondOrderId);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $firstOrderId,
+            'status' => OrderStatus::CANCELLED->value,
+        ]);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $secondOrderId,
+            'status' => OrderStatus::PENDING->value,
+        ]);
+    }
+
 }
