@@ -62,6 +62,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/library', [LibraryController::class, 'index']);
 
         // Item Access
+        Route::post(
+            '/items/{item:slug}/access',
+            [ItemController::class, 'claimFree']
+        );
+
         Route::get(
             '/items/{item:slug}/access',
             [ItemController::class, 'access']

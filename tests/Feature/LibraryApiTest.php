@@ -24,7 +24,7 @@ class LibraryApiTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_authenticated_user_can_see_visible_free_items_in_library(): void
+    public function test_authenticated_user_cannot_see_free_item_in_library_before_claiming(): void
     {
         $user = User::factory()->create();
 
@@ -32,6 +32,33 @@ class LibraryApiTest extends TestCase
             'title' => 'Free Item',
             'access_type' => 'free',
             'is_visible' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/library');
+
+        $response
+            ->assertOk()
+            ->assertJsonMissing([
+                'id' => $freeItem->id,
+                'title' => 'Free Item',
+            ]);
+    }
+
+    public function test_authenticated_user_can_see_free_item_in_library_after_claiming(): void
+    {
+        $user = User::factory()->create();
+
+        $freeItem = Item::factory()->create([
+            'title' => 'Free Item',
+            'access_type' => 'free',
+            'is_visible' => true,
+        ]);
+
+        Access::create([
+            'user_id' => $user->id,
+            'item_id' => $freeItem->id,
         ]);
 
         $response = $this
@@ -95,7 +122,7 @@ class LibraryApiTest extends TestCase
             ]);
     }
 
-    public function test_active_subscription_grants_all_visible_paid_items(): void
+    public function test_active_subscription_does_not_add_paid_items_to_library_without_direct_access(): void
     {
         Carbon::setTestNow('2026-08-27 12:00:00');
 
@@ -138,11 +165,11 @@ class LibraryApiTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonFragment([
+            ->assertJsonMissing([
                 'id' => $firstItem->id,
                 'title' => 'First Paid Item',
             ])
-            ->assertJsonFragment([
+            ->assertJsonMissing([
                 'id' => $secondItem->id,
                 'title' => 'Second Paid Item',
             ]);

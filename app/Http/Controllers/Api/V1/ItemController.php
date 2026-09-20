@@ -7,6 +7,7 @@ use App\Http\Resources\ItemResource;
 use App\Models\Item;
 use App\Models\User;
 use App\Http\Requests\ItemIndexRequest;
+use App\Services\AccessGrantService;
 use App\Services\AccessResolver;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -78,6 +79,25 @@ class ItemController extends Controller
         ]);
 
         return new ItemResource($item);
+    }
+
+    public function claimFree(
+        Request $request,
+        Item $item,
+        AccessGrantService $accessGrantService
+    ): JsonResponse {
+        abort_unless($item->is_visible, 404);
+
+        abort_unless($item->access_type === 'free', 403);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $accessGrantService->grant($user, $item);
+
+        return response()->json([
+            'message' => 'Item added to library.',
+        ]);
     }
 
     public function access(Request $request, Item $item, AccessResolver $accessResolver): JsonResponse

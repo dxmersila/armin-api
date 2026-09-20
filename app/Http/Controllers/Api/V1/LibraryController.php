@@ -16,23 +16,10 @@ class LibraryController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $hasActiveSubscription = $user->subscriptions()
-            ->where('starts_at', '<=', now())
-            ->where('ends_at', '>', now())
-            ->exists();
-
         $query = Item::query()
             ->where('is_visible', true)
-            ->where(function ($query) use ($user, $hasActiveSubscription) {
-                $query
-                    ->where('access_type', 'free')
-                    ->orWhereHas('accesses', function ($accessQuery) use ($user) {
-                        $accessQuery->where('user_id', $user->id);
-                    });
-
-                if ($hasActiveSubscription) {
-                    $query->orWhere('access_type', 'paid');
-                }
+            ->whereHas('accesses', function ($accessQuery) use ($user) {
+                $accessQuery->where('user_id', $user->id);
             })
             ->with([
                 'categories',

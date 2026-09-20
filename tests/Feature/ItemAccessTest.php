@@ -39,7 +39,7 @@ class ItemAccessTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_authenticated_user_can_access_free_item(): void
+    public function test_authenticated_user_cannot_access_free_item_before_claiming(): void
     {
         $user = User::factory()->create();
 
@@ -51,11 +51,101 @@ class ItemAccessTest extends TestCase
             ->actingAs($user, 'sanctum')
             ->getJson("/api/v1/items/{$item->slug}/access");
 
+        $response->assertForbidden();
+    }
+
+    public function test_authenticated_user_can_claim_free_item(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'free',
+        ]);
+
+        $response = $this
+            ->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/items/{$item->slug}/access");
+
         $response
             ->assertOk()
             ->assertJson([
-                'message' => 'Item access granted.',
+                'message' => 'Item added to library.',
             ]);
+
+        $this->assertDatabaseHas('accesses', [
+            'user_id' => $user->id,
+            'item_id' => $item->id,
+        ]);
+    }
+
+    public function test_claiming_free_item_does_not_create_duplicate_access(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'free',
+        ]);
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/items/{$item->slug}/access")
+            ->assertOk();
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/items/{$item->slug}/access")
+            ->assertOk();
+
+        $this->assertSame(
+            1,
+            Access::where('user_id', $user->id)
+                ->where('item_id', $item->id)
+                ->count()
+        );
+    }
+
+    public function test_guest_cannot_claim_free_item(): void
+    {
+        $item = Item::factory()->create([
+            'access_type' => 'free',
+        ]);
+
+        $response = $this->postJson(
+            "/api/v1/items/{$item->slug}/access"
+        );
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_authenticated_user_cannot_claim_paid_item(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+        ]);
+
+        $response = $this
+            ->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/items/{$item->slug}/access");
+
+        $response->assertForbidden();
+    }
+
+    public function test_authenticated_user_cannot_claim_hidden_free_item(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'free',
+            'is_visible' => false,
+        ]);
+
+        $response = $this
+            ->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/items/{$item->slug}/access");
+
+        $response->assertNotFound();
     }
 
     public function test_authenticated_user_can_access_paid_item_with_individual_access(): void
@@ -214,7 +304,7 @@ class ItemAccessTest extends TestCase
             ]);
     }
 
-    public function test_authenticated_user_can_access_free_item_content(): void
+    public function test_authenticated_user_can_access_free_item_content_after_claiming(): void
     {
         $user = User::factory()->create();
 
@@ -222,6 +312,11 @@ class ItemAccessTest extends TestCase
             'access_type' => 'free',
             'content' => 'FREE CONTENT',
         ]);
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/items/{$item->slug}/access")
+            ->assertOk();
 
         $response = $this
             ->actingAs($user, 'sanctum')

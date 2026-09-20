@@ -45,7 +45,7 @@ class ItemContentTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_authenticated_user_can_access_free_item_content(): void
+    public function test_authenticated_user_can_access_free_item_content_after_claiming(): void
     {
         $user = User::factory()->create();
 
@@ -54,8 +54,13 @@ class ItemContentTest extends TestCase
             'content' => 'Free item secret content',
         ]);
 
+        $this
+            ->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/items/{$item->slug}/access")
+            ->assertOk();
+
         $response = $this
-            ->actingAs($user)
+            ->actingAs($user, 'sanctum')
             ->getJson("/api/v1/items/{$item->slug}/content");
 
         $response

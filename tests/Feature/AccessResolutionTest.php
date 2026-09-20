@@ -18,11 +18,30 @@ class AccessResolutionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_authenticated_user_can_access_free_item(): void
+    public function test_authenticated_user_cannot_access_free_item_without_access(): void
     {
         $user = User::factory()->create();
         $item = Item::factory()->create([
             'access_type' => 'free',
+        ]);
+
+        $resolver = app(AccessResolver::class);
+
+        $this->assertFalse(
+            $resolver->canAccess($user, $item)
+        );
+    }
+
+    public function test_authenticated_user_can_access_free_item_with_individual_access(): void
+    {
+        $user = User::factory()->create();
+        $item = Item::factory()->create([
+            'access_type' => 'free',
+        ]);
+
+        Access::create([
+            'user_id' => $user->id,
+            'item_id' => $item->id,
         ]);
 
         $resolver = app(AccessResolver::class);
