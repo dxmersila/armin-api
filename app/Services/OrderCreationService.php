@@ -65,23 +65,43 @@ class OrderCreationService
                 ->values()
                 ->all();
 
-            $pendingOrders = Order::query()
+            $existingOrders = Order::query()
                 ->where('user_id', $user->id)
                 ->where('type', OrderType::ITEM)
-                ->where('status', OrderStatus::PENDING)
+                ->whereIn('status', [
+                    OrderStatus::PENDING,
+                    OrderStatus::CANCELLED,
+                ])
                 ->with('orderItems')
+                ->orderByDesc('id')
                 ->get();
 
-            foreach ($pendingOrders as $pendingOrder) {
-                $existingItemIds = $pendingOrder->orderItems
+            foreach ($existingOrders as $existingOrder) {
+                $existingItemIds = $existingOrder->orderItems
                     ->pluck('item_id')
                     ->sort()
                     ->values()
                     ->all();
 
-                if ($existingItemIds === $requestedItemIds) {
-                    return $pendingOrder->load('orderItems');
+                if ($existingItemIds !== $requestedItemIds) {
+                    continue;
                 }
+
+                $existingOrder->update([
+                    'status' => OrderStatus::PENDING,
+                ]);
+
+                foreach ($items as $item) {
+                    $existingOrder->orderItems()
+                        ->where('item_id', $item->id)
+                        ->update([
+                            'price' => $item->price,
+                        ]);
+                }
+
+                $this->pricingService->update($existingOrder);
+
+                return $existingOrder->load('orderItems');
             }
 
             $order = Order::create([

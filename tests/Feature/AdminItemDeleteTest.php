@@ -69,6 +69,42 @@ class AdminItemDeleteTest extends TestCase
         ]);
     }
 
+    public function test_admin_cannot_delete_item_with_order_history(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+        ]);
+
+        $order = \App\Models\Order::factory()->create([
+            'user_id' => $user->id,
+        ]);
+
+        \App\Models\OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'item_id' => $item->id,
+            'price' => $item->price,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/admin/items/{$item->id}")
+            ->assertStatus(409);
+
+        $this->assertDatabaseHas('items', [
+            'id' => $item->id,
+        ]);
+
+        $this->assertDatabaseHas('order_items', [
+            'order_id' => $order->id,
+            'item_id' => $item->id,
+        ]);
+    }
+
     public function test_deleting_item_removes_category_relationships(): void
     {
         $admin = User::factory()->create([

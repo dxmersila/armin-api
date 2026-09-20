@@ -63,6 +63,72 @@ class PaymentApiTest extends TestCase
         ]);
     }
 
+    public function test_creating_payment_removes_hidden_items_and_recalculates_order_total(): void
+    {
+        $user = User::factory()->create();
+
+        $visibleItem = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 200000,
+            'is_visible' => true,
+        ]);
+
+        $hiddenItem = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 100000,
+            'is_visible' => false,
+        ]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'status' => OrderStatus::PENDING,
+            'total_price' => 300000,
+        ]);
+
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'item_id' => $visibleItem->id,
+            'price' => 200000,
+        ]);
+
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'item_id' => $hiddenItem->id,
+            'price' => 100000,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->postJson("/api/v1/orders/{$order->id}/payments");
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.order_id', $order->id)
+            ->assertJsonPath('data.amount', 200000)
+            ->assertJsonPath('data.status', PaymentStatus::PENDING->value);
+
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $order->id,
+            'amount' => 200000,
+            'status' => PaymentStatus::PENDING->value,
+        ]);
+
+        $this->assertDatabaseHas('order_items', [
+            'order_id' => $order->id,
+            'item_id' => $visibleItem->id,
+        ]);
+
+        $this->assertDatabaseMissing('order_items', [
+            'order_id' => $order->id,
+            'item_id' => $hiddenItem->id,
+        ]);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'total_price' => 200000,
+            'status' => OrderStatus::PENDING->value,
+        ]);
+    }
+
     public function test_user_cannot_create_payment_for_another_users_order(): void
     {
         $user = User::factory()->create();

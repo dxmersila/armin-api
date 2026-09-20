@@ -283,6 +283,53 @@ class OrderApiTest extends TestCase
         ]);
     }
 
+    public function test_cancelled_order_reuse_refreshes_item_price(): void
+    {
+        $user = User::factory()->create();
+
+        $item = Item::factory()->create([
+            'access_type' => 'paid',
+            'price' => 100000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $firstResponse = $this->postJson('/api/v1/orders', [
+            'item_ids' => [$item->id],
+        ]);
+
+        $firstResponse->assertCreated();
+
+        $orderId = $firstResponse->json('data.id');
+
+        $this->deleteJson("/api/v1/orders/{$orderId}")
+            ->assertNoContent();
+
+        $item->update([
+            'price' => 250000,
+        ]);
+
+        $secondResponse = $this->postJson('/api/v1/orders', [
+            'item_ids' => [$item->id],
+        ]);
+
+        $secondResponse
+            ->assertOk()
+            ->assertJsonPath('data.id', $orderId)
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.total_price', 250000)
+            ->assertJsonPath('data.items.0.price', 250000);
+
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseCount('order_items', 1);
+
+        $this->assertDatabaseHas('order_items', [
+            'order_id' => $orderId,
+            'item_id' => $item->id,
+            'price' => 250000,
+        ]);
+    }
+
     public function test_free_item_cannot_be_purchased(): void
     {
         $user = User::factory()->create();
@@ -919,7 +966,7 @@ class OrderApiTest extends TestCase
         ]);
     }
 
-    public function test_cancelled_order_allows_creating_a_new_order_for_the_same_item(): void
+    public function test_cancelled_order_is_reused_for_the_same_item(): void
     {
         $user = User::factory()->create();
 
@@ -936,9 +983,9 @@ class OrderApiTest extends TestCase
 
         $firstResponse->assertCreated();
 
-        $firstOrderId = $firstResponse->json('data.id');
+        $orderId = $firstResponse->json('data.id');
 
-        $this->deleteJson("/api/v1/orders/{$firstOrderId}")
+        $this->deleteJson("/api/v1/orders/{$orderId}")
             ->assertNoContent();
 
         $secondResponse = $this->postJson('/api/v1/orders', [
@@ -946,22 +993,25 @@ class OrderApiTest extends TestCase
         ]);
 
         $secondResponse
-            ->assertCreated()
+            ->assertOk()
+            ->assertJsonPath('data.id', $orderId)
             ->assertJsonPath('data.status', 'pending')
             ->assertJsonPath('data.total_price', 100000);
 
-        $secondOrderId = $secondResponse->json('data.id');
-
-        $this->assertNotSame($firstOrderId, $secondOrderId);
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseCount('order_items', 1);
 
         $this->assertDatabaseHas('orders', [
-            'id' => $firstOrderId,
-            'status' => OrderStatus::CANCELLED->value,
+            'id' => $orderId,
+            'user_id' => $user->id,
+            'status' => OrderStatus::PENDING->value,
+            'total_price' => 100000,
         ]);
 
-        $this->assertDatabaseHas('orders', [
-            'id' => $secondOrderId,
-            'status' => OrderStatus::PENDING->value,
+        $this->assertDatabaseHas('order_items', [
+            'order_id' => $orderId,
+            'item_id' => $item->id,
+            'price' => 100000,
         ]);
     }
 

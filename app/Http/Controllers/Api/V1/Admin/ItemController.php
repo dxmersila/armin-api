@@ -177,6 +177,12 @@ class ItemController extends Controller
      */
     public function destroy(Item $item): Response
     {
+        abort_if(
+            $item->orderItems()->exists(),
+            409,
+            'Item cannot be deleted because it has order history.'
+        );
+
         $mediaFiles = $item->media()
             ->with('file')
             ->get()
