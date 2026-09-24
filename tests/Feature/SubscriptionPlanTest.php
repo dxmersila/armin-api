@@ -60,4 +60,32 @@ class SubscriptionPlanTest extends TestCase
 
         $this->assertFalse($plan->is_active);
     }
+
+    public function test_public_subscription_plans_returns_only_active_plans(): void
+    {
+        SubscriptionPlan::factory()->create([
+            'name' => 'Inactive Plan',
+            'duration_months' => 1,
+            'price' => 50000,
+            'is_active' => false,
+        ]);
+
+        $activePlan = SubscriptionPlan::factory()->create([
+            'name' => 'Monthly',
+            'duration_months' => 1,
+            'price' => 99000,
+            'is_active' => true,
+        ]);
+
+        $response = $this->getJson('/api/v1/subscription-plans');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $activePlan->id)
+            ->assertJsonPath('data.0.name', 'Monthly')
+            ->assertJsonPath('data.0.duration_months', 1)
+            ->assertJsonPath('data.0.price', 99000)
+            ->assertJsonPath('data.0.is_active', true);
+    }
 }

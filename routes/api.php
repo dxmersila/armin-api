@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\LibraryController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
+use App\Http\Controllers\Api\V1\SubscriptionPlanController as PublicSubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -39,12 +40,17 @@ Route::prefix('v1')->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{category:slug}', [CategoryController::class, 'show']);
 
+    // Subscription Plans
+    Route::get(
+        '/subscription-plans',
+        [PublicSubscriptionPlanController::class, 'index']
+    );
+
     // Payment Callback
     Route::get(
         '/payments/{payment}/callback',
         [PaymentController::class, 'callback']
     );
-
 
     /*
     |--------------------------------------------------------------------------
