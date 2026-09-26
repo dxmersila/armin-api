@@ -1,58 +1,193 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Armin API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Armin API is the Laravel backend of the Armin Template ecosystem.
 
-## About Laravel
+It provides the API, business rules, authentication, authorization, commerce, payments, subscriptions, access control, and data management used by the independent Armin Admin and Armin Web applications.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+The API is designed as a reusable, domain-neutral foundation for SaaS and digital-product applications.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Role in the Armin Ecosystem
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Armin consists of three independent applications:
 
-## Learning Laravel
+* **Armin API** — Laravel backend and source of truth for business rules and data.
+* **Armin Admin** — React-based administrative interface.
+* **Armin Web** — Next.js public-facing web application.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```text
+                         Armin
+                           │
+          ┌────────────────┼────────────────┐
+          │                │                │
+          ▼                ▼                ▼
+        API              Admin             Web
+      Laravel          React/Vite        Next.js
+          │                │                │
+          └────────────────┼────────────────┘
+                           │
+                     REST API Contract
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+The API is the authoritative backend. Admin and Web consume the API and do not own authoritative business rules.
 
-## Contributing
+## Tech Stack
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+* Laravel 13
+* PHP 8.4
+* MySQL
+* Laravel Sanctum
+* REST API
+* Docker
+* Nginx
+* PHP-FPM
 
-## Code of Conduct
+The API is versioned under:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```text
+/api/v1
+```
 
-## Security Vulnerabilities
+## Core Responsibilities
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+The API provides the backend foundation for:
 
-## License
+* Authentication and user management
+* Role-based administration
+* Item and category management
+* Tags and media
+* Free and paid access
+* Orders and order items
+* Payments and payment gateways
+* ZarinPal integration
+* Subscription plans and subscriptions
+* Access control and protected content
+* API resources and stable HTTP contracts
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Business-critical decisions remain on the backend, including:
+
+* Authorization
+* Access control
+* Pricing
+* Order state
+* Payment state
+* Subscription state
+* User entitlements
+* Protected content access
+
+Frontend applications consume these rules through the API.
+
+## Architecture
+
+Armin API follows a deliberately simple architecture:
+
+* API First
+* Backend / Frontend Separation
+* Thin Controllers
+* Explicit Business Rules
+* Meaningful Services
+* Form Requests for meaningful validation
+* Reusable Components
+* Testable Code
+* Docker First
+* Stable API Contracts
+* Convention Over Configuration
+* Avoid Premature Abstraction
+
+The backend intentionally avoids unnecessary abstraction layers unless real product requirements justify them.
+
+## Development
+
+The API is developed and tested inside the Docker environment.
+
+Typical development commands include:
+
+```bash
+docker compose up -d
+```
+
+Run the test suite with:
+
+```bash
+docker compose exec app php artisan test
+```
+
+The exact development environment and operational details are maintained in the project documentation.
+
+## Documentation
+
+The complete Armin Template documentation is maintained in:
+
+```text
+Armin Documentation/
+```
+
+Start with:
+
+* [`Armin Documentation/README.md`](Armin%20Documentation/README.md) — documentation overview
+* [`Armin Documentation/ARMIN.md`](Armin%20Documentation/ARMIN.md) — ecosystem definition and Template → Product lifecycle
+* [`Armin Documentation/ARCHITECTURE.md`](Armin%20Documentation/ARCHITECTURE.md) — technical architecture and decisions
+* [`Armin Documentation/FEATURES.md`](Armin%20Documentation/FEATURES.md) — implemented capabilities and boundaries
+* [`Armin Documentation/API Contract.md`](Armin%20Documentation/API%20Contract.md) — HTTP API contract
+* [`Armin Documentation/SESSION.md`](Armin%20Documentation/SESSION.md) — current project checkpoint
+
+## Template to Product
+
+Armin API is part of the reusable Armin Template.
+
+The Template is intended to be cloned into independent product instances:
+
+```text
+Armin Template
+      ↓
+Product Instance
+      ↓
+Product-specific configuration
+      ↓
+Production
+```
+
+Product-specific branding, content, catalog data, domains, and production credentials do not belong in the generic Template.
+
+The first product instance built from Armin is **Prompt Box**.
+
+## Payment Configuration
+
+Armin includes the payment gateway integration required by supported payment workflows, including ZarinPal.
+
+The Template does **not** contain real production payment credentials.
+
+Production credentials belong to each individual product instance and are configured only in the appropriate production environment.
+
+```text
+Armin Template
+    └── ZarinPal integration
+
+Prompt Box
+    └── Production ZarinPal credentials
+```
+
+## Status
+
+**Complete / Stable**
+
+The current Armin API represents the stable backend baseline of the Armin Template.
+
+Future changes should be introduced when a real, reusable requirement benefits the Template or multiple product instances.
+
+## Repository Structure
+
+```text
+armin-api/
+│
+├── app/
+├── bootstrap/
+├── config/
+├── database/
+├── routes/
+├── tests/
+├── Armin Documentation/
+├── README.md
+└── ...
+```
+
+The API repository is the source of truth for the backend implementation and the central documentation for the Armin Template.
