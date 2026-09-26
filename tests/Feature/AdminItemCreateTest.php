@@ -87,6 +87,33 @@ class AdminItemCreateTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_create_item_with_persian_auto_generated_slug(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/admin/items', [
+                'title' => 'راهنمای ساخت پرامپت حرفه‌ای',
+            ]);
+
+        $response
+            ->assertStatus(201)
+            ->assertJson([
+                'data' => [
+                    'title' => 'راهنمای ساخت پرامپت حرفه‌ای',
+                    'slug' => 'راهنمای-ساخت-پرامپت-حرفه‌ای',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('items', [
+            'title' => 'راهنمای ساخت پرامپت حرفه‌ای',
+            'slug' => 'راهنمای-ساخت-پرامپت-حرفه‌ای',
+        ]);
+    }
+
     public function test_admin_can_create_item(): void
     {
         $admin = User::factory()->create([
