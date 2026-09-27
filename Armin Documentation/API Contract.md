@@ -210,6 +210,8 @@ Supported capabilities include:
 
 * Search
 * Category filtering
+* Tag filtering
+* Access type filtering (`free` or `paid`)
 * Sorting
 * Pagination
 
