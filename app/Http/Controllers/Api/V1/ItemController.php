@@ -38,6 +38,10 @@ class ItemController extends Controller
             });
         }
 
+        if ($request->filled('access_type')) {
+            $query->where('access_type', $request->access_type);
+        }
+
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
