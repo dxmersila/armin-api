@@ -190,4 +190,4 @@ armin-api/
 └── ...
 ```
 
-The API repository is the source of truth for the backend implementation and the central documentation for the Armin Template.
+This repository is the source of truth for the Armin backend implementation. The central Armin Template documentation is maintained in `Armin Documentation/`.
