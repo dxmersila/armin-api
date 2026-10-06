@@ -33,6 +33,10 @@ The API provides:
 * Login
 * Logout
 * Current-user endpoint
+* Email verification
+* Email verification notification
+* Password reset request
+* Password reset
 * Laravel Sanctum authentication
 * Token-based API authentication
 * Request validation
@@ -208,7 +212,9 @@ The API supports:
 * Administrative order listing
 * Administrative order details
 * Pagination
-* Filtering
+* Order-status filtering
+* User filtering
+* Payment-status filtering
 * Deterministic ordering
 
 The price stored on an `OrderItem` represents the historical purchase price.

@@ -31,9 +31,9 @@ Launch
 
 ## Immediate Next Step
 
-Obtain and configure the real **ZarinPal production credentials** for the first product instance.
+Continue the productionization of the first product instance.
 
-Production credentials must be configured at the product-instance level and must never be committed to the reusable template repository.
+Product-instance production configuration, deployment validation, real product content, and production payment configuration belong to the product instance and must not be committed to the reusable Template repository.
 
 ## First Product Instance
 

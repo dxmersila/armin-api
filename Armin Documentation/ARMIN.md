@@ -366,7 +366,7 @@ All three applications are complete and stable at the intended Template scope.
 | Next.js Web        | Complete / Stable |
 | Armin Template     | Complete / Stable |
 
-The projects are synchronized with their GitHub repositories and there are no currently known blockers in the Template itself.
+The Template repositories are maintained under GitHub. Repository synchronization should be verified before release or handoff, and there are no currently known blockers in the Template itself.
 
 This status means the Template development phase is complete.
 
