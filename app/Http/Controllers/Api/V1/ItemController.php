@@ -65,6 +65,10 @@ class ItemController extends Controller
 
                 default => null,
             };
+        } else {
+            $query
+                ->orderByDesc('created_at')
+                ->orderByDesc('id');
         }
 
         $items = $query->paginate(12);
