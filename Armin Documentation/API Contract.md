@@ -172,6 +172,56 @@ Requires authentication.
 
 ---
 
+## 8.5 Email Verification
+
+```http
+GET /api/v1/auth/email/verify/{id}
+```
+
+Verifies the user email address using the signed verification URL.
+
+The verification request is signed and does not require bearer authentication.
+
+---
+
+## 8.6 Resend Verification Notification
+
+```http
+POST /api/v1/auth/email/verification-notification
+```
+
+Resends the email verification notification when applicable.
+
+The endpoint is rate-limited and does not reveal whether an account exists or is already verified.
+
+---
+
+## 8.7 Forgot Password
+
+```http
+POST /api/v1/auth/password/forgot
+```
+
+Requests a password reset link.
+
+The response is intentionally generic and does not reveal whether an account exists for the submitted email address.
+
+The endpoint is rate-limited.
+
+---
+
+## 8.8 Reset Password
+
+```http
+POST /api/v1/auth/password/reset
+```
+
+Resets the password using a valid password reset token.
+
+The endpoint is rate-limited.
+
+---
+
 # 9. Categories
 
 ## 9.1 List Categories
@@ -187,12 +237,14 @@ Returns public categories.
 ## 9.2 Category Items
 
 ```http
-GET /api/v1/categories/{category}/items
+GET /api/v1/categories/{category:slug}
 ```
 
-Returns public items belonging to the specified category.
+Returns the publicly discoverable items belonging to the specified category.
 
-Only items eligible for public discovery are returned.
+Only visible items are returned.
+
+The response is an Item resource collection.
 
 ---
 
@@ -252,7 +304,25 @@ Guests receive an authentication-required response.
 
 ---
 
-## 10.4 Protected Item Content
+## 10.4 Claim Free Item
+
+```http
+POST /api/v1/items/{item:slug}/access
+```
+
+Adds a free item to the authenticated user library.
+
+Requires authentication.
+
+Only visible free items can be claimed through this endpoint.
+
+Paid items cannot be claimed through the free-item workflow.
+
+A successful request returns `200` with a confirmation message.
+
+---
+
+## 10.5 Protected Item Content
 
 ```http
 GET /api/v1/items/{item:slug}/content
@@ -263,6 +333,22 @@ Returns protected item content when the authenticated user is authorized to acce
 Requires authentication and backend access authorization.
 
 The client must not determine access independently.
+
+---
+
+## 10.6 User Library
+
+```http
+GET /api/v1/library
+```
+
+Returns visible items that have been directly granted to the authenticated user library.
+
+Requires authentication.
+
+The collection is ordered by creation time descending with item ID as a deterministic secondary ordering.
+
+The current endpoint uses a page size of 12.
 
 ---
 
@@ -310,6 +396,8 @@ Requires authentication.
 
 The endpoint does not expose another user's orders.
 
+The current implementation uses Laravel's default pagination size for this endpoint.
+
 ---
 
 ## 12.2 Create Order
@@ -319,6 +407,12 @@ POST /api/v1/orders
 ```
 
 Creates an order according to the supported order workflows.
+
+Supported order types are `item` and `subscription`.
+
+For `item` orders, the request supplies `item_ids`. For `subscription` orders, the request supplies `subscription_plan_id`.
+
+If `type` is omitted, the API defaults it to `item`.
 
 The server is authoritative for:
 
@@ -341,6 +435,20 @@ GET /api/v1/orders/{order}
 Returns an order belonging to the authenticated user.
 
 Ownership is enforced by the API.
+
+---
+
+## 12.4 Delete Order
+
+```http
+DELETE /api/v1/orders/{order}
+```
+
+Cancels an order according to the backend order-cancellation rules.
+
+Ownership is enforced by the API.
+
+A successful request returns `204` with no response body.
 
 ---
 
@@ -454,6 +562,8 @@ Requires authentication.
 
 The endpoint does not expose another user's subscriptions.
 
+The current implementation uses Laravel's default pagination size for this endpoint.
+
 ---
 
 # 18. Subscription State
@@ -563,6 +673,15 @@ Authorization and validation are enforced by the API.
 GET /api/v1/admin/categories
 ```
 
+Supports:
+
+* Search
+* Sorting
+* Pagination
+* Deterministic ordering
+
+The current admin collection uses a page size of 15.
+
 ## 21.2 Create
 
 ```http
@@ -578,7 +697,7 @@ GET /api/v1/admin/categories/{category}
 ## 21.4 Update
 
 ```http
-PATCH /api/v1/admin/categories/{category}
+PUT|PATCH /api/v1/admin/categories/{category}
 ```
 
 ## 21.5 Delete
@@ -602,9 +721,14 @@ GET /api/v1/admin/items
 Supports:
 
 * Search
-* Filtering
+* Visibility filtering (`is_visible`)
+* Access type filtering (`free` or `paid`)
+* Category filtering (`category_id`)
 * Sorting
 * Pagination
+* Deterministic ordering
+
+The current admin collection uses a page size of 15.
 
 ---
 
@@ -631,7 +755,7 @@ Returns administrative Item details.
 ## 22.4 Update
 
 ```http
-PATCH /api/v1/admin/items/{item}
+PUT|PATCH /api/v1/admin/items/{item}
 ```
 
 Updates an Item.
@@ -652,14 +776,35 @@ Deletes an Item according to the backend integrity rules.
 
 Media management is scoped to Items.
 
-The current API supports workflows for:
+## 23.1 Upload Media
 
-* Uploading media
-* Setting primary media
-* Ordering media
-* Deleting media
+```http
+POST /api/v1/admin/items/{item}/media
+```
 
-The exact route structure should be treated as part of the implementation contract and kept synchronized with the API route definitions.
+Uploads media for the specified Item.
+
+---
+
+## 23.2 Delete Media
+
+```http
+DELETE /api/v1/admin/items/{item}/media/{media}
+```
+
+Deletes media belonging to the specified Item.
+
+---
+
+## 23.3 Set Primary Media
+
+```http
+PATCH /api/v1/admin/items/{item}/media/{media}/primary
+```
+
+Sets the specified media as the primary media for the Item.
+
+Media ordering is part of the media management workflow but does not have a separate API route.
 
 ---
 
@@ -673,7 +818,6 @@ GET /api/v1/admin/orders
 
 Supports:
 
-* Search/filtering
 * Order-status filtering
 * User filtering
 * Payment-status filtering
@@ -715,13 +859,13 @@ POST /api/v1/admin/subscription-plans
 ## 25.3 Show
 
 ```http
-GET /api/v1/admin/subscription-plans/{subscriptionPlan}
+GET /api/v1/admin/subscription-plans/{subscription_plan}
 ```
 
 ## 25.4 Update
 
 ```http
-PATCH /api/v1/admin/subscription-plans/{subscriptionPlan}
+PUT|PATCH /api/v1/admin/subscription-plans/{subscription_plan}
 ```
 
 The administrative Subscription Plan workflow supports:
@@ -742,6 +886,7 @@ The API currently exposes structured resources for entities including:
 * Category
 * Tag
 * Media
+* File
 * Payment
 * Subscription Plan
 * Subscription
