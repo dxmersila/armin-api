@@ -9,9 +9,11 @@ use App\Models\User;
 use App\Http\Requests\ItemIndexRequest;
 use App\Services\AccessGrantService;
 use App\Services\AccessResolver;
+use App\Services\AnalyticsEventService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Str;
 
 class ItemController extends Controller
 {
@@ -128,7 +130,8 @@ class ItemController extends Controller
     public function content(
         Request $request,
         Item $item,
-        AccessResolver $accessResolver
+        AccessResolver $accessResolver,
+        AnalyticsEventService $analyticsEventService
     ): JsonResponse {
         abort_unless($item->is_visible, 404);
 
@@ -139,6 +142,23 @@ class ItemController extends Controller
             $accessResolver->canAccess($user, $item),
             403
         );
+
+        $visitorId = $request->header('X-Analytics-Visitor-Id');
+        $sessionId = $request->header('X-Analytics-Session-Id');
+
+        if (
+            is_string($visitorId)
+            && is_string($sessionId)
+            && Str::isUuid($visitorId)
+            && Str::isUuid($sessionId)
+        ) {
+            $analyticsEventService->recordPromptAccess(
+                $visitorId,
+                $sessionId,
+                $item,
+                $user
+            );
+        }
 
         return response()->json([
             'content' => $item->content,

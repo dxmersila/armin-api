@@ -25,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('analytics-events', function ($request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
+
         RateLimiter::for('login', function ($request) {
             $email = strtolower((string) $request->input('email'));
 
