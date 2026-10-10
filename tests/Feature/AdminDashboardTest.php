@@ -68,14 +68,14 @@ class AdminDashboardTest extends TestCase
         $events = [
             [AnalyticsEvent::EVENT_VISIT, $visitorA, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', $now->copy()->subHour()],
             [AnalyticsEvent::EVENT_VISIT, $visitorA, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', $now->copy()->subHours(2)],
-            [AnalyticsEvent::EVENT_PROMPT_ACCESS, $visitorB, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', $now->copy()->subHours(3)],
-            [AnalyticsEvent::EVENT_PROMPT_COPY, $visitorB, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', $now->copy()->subHours(4)],
+            [AnalyticsEvent::EVENT_ITEM_ACCESS, $visitorB, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', $now->copy()->subHours(3)],
+            [AnalyticsEvent::EVENT_ITEM_COPY, $visitorB, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', $now->copy()->subHours(4)],
             [AnalyticsEvent::EVENT_VISIT, $visitorB, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', $now->copy()->subDays(2)],
-            [AnalyticsEvent::EVENT_PROMPT_ACCESS, $visitorB, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', $now->copy()->subDays(2)->addHour()],
+            [AnalyticsEvent::EVENT_ITEM_ACCESS, $visitorB, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', $now->copy()->subDays(2)->addHour()],
             [AnalyticsEvent::EVENT_VISIT, $visitorC, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', $now->copy()->startOfMonth()->addDay()],
-            [AnalyticsEvent::EVENT_PROMPT_COPY, $visitorC, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', $now->copy()->startOfMonth()->addDay()->addHour()],
+            [AnalyticsEvent::EVENT_ITEM_COPY, $visitorC, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', $now->copy()->startOfMonth()->addDay()->addHour()],
             [AnalyticsEvent::EVENT_VISIT, $visitorD, 'ffffffff-ffff-4fff-8fff-ffffffffffff', $now->copy()->subDays(40)],
-            [AnalyticsEvent::EVENT_PROMPT_ACCESS, $visitorD, 'ffffffff-ffff-4fff-8fff-ffffffffffff', $now->copy()->subDays(40)->addHour()],
+            [AnalyticsEvent::EVENT_ITEM_ACCESS, $visitorD, 'ffffffff-ffff-4fff-8fff-ffffffffffff', $now->copy()->subDays(40)->addHour()],
         ];
 
         foreach ($events as [$event, $visitorId, $sessionId, $createdAt]) {
@@ -99,26 +99,26 @@ class AdminDashboardTest extends TestCase
                     'today' => [
                         'visits' => 2,
                         'unique_visitors' => 1,
-                        'prompt_access' => 1,
-                        'prompt_copies' => 1,
+                        'item_access' => 1,
+                        'item_copies' => 1,
                     ],
                     'week' => [
                         'visits' => 3,
                         'unique_visitors' => 2,
-                        'prompt_access' => 2,
-                        'prompt_copies' => 1,
+                        'item_access' => 2,
+                        'item_copies' => 1,
                     ],
                     'month' => [
                         'visits' => 4,
                         'unique_visitors' => 3,
-                        'prompt_access' => 2,
-                        'prompt_copies' => 2,
+                        'item_access' => 2,
+                        'item_copies' => 2,
                     ],
                     'year' => [
                         'visits' => 5,
                         'unique_visitors' => 4,
-                        'prompt_access' => 3,
-                        'prompt_copies' => 2,
+                        'item_access' => 3,
+                        'item_copies' => 2,
                     ],
                 ],
             ]);
